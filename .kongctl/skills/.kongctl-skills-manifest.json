@@ -1,0 +1,9 @@
+{
+  "cli_version": "dev",
+  "installed_at": "2026-09-21T17:19:09Z",
+  "skills": [
+    "kongctl-ai-gateway",
+    "kongctl-declarative",
+    "kongctl-extension-builder"
+  ]
+}
