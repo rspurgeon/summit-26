@@ -5,8 +5,8 @@ running gateway still has its original single model and no caller auth until
 this expansion is applied.
 
 The source is in [draft PR #1](https://github.com/rspurgeon/summit-26/pull/1).
-The GitHub provider and caller secrets are configured; Konnect CI PATs are
-pending explicit authorization. No expansion plan has been applied.
+All five GitHub workflow secrets are configured, including two distinct
+30-day Konnect CI PATs. No expansion plan has been applied.
 
 The manifest preserves gateway `summit-ai-demo`, namespace `summit-ai-demo`,
 the public data plane certificate, and the `demo-chat` alias. It adds

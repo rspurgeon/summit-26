@@ -16,12 +16,11 @@ It must be merged to `main` before manual dispatch is available. The branch
 contains the manifest, workflow, public certificate, scripts, and runbooks.
 The ignored local `.env` and private data plane key are not pushed.
 
-Current setup: `OPENAI_API_KEY`, `FULL_ACCESS_API_KEY`, and
-`LIMITED_ACCESS_API_KEY` are configured as GitHub repository secrets. The two
-Konnect CI PAT secrets are **not configured**. Automatic approval review
-rejected creating new PATs with unspecified privilege scopes and exporting
-them to GitHub. The workflow cannot plan or deploy until separately authorized
-Konnect CI credentials are supplied.
+Current setup: all five GitHub repository secrets below are configured.
+`KONNECT_PLAN_PAT` and `KONNECT_APPLY_PAT` are distinct 30-day personal access
+tokens with the current account's Konnect privileges, created after explicit
+authorization. They should be replaced with narrower system account tokens
+for longer term operation and rotated before expiry.
 
 ## Repository secrets
 
