@@ -22,8 +22,6 @@ def fail(message):
 def identity():
     return {
         "source_sha": os.environ["GITHUB_SHA"],
-        "run_id": os.environ["GITHUB_RUN_ID"],
-        "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
         "profile": "default",
         "base_url": BASE_URL,
         "organization_id": ORG_ID,
@@ -66,6 +64,8 @@ def main():
 
     if sys.argv[1] == "write":
         manifest = identity() | {
+            "run_id": os.environ["GITHUB_RUN_ID"],
+            "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
             "plan_sha256": digest,
             "generated_at": plan["metadata"]["generated_at"],
             "summary": plan["summary"],
@@ -83,6 +83,10 @@ def main():
     for key, value in identity().items():
         if manifest.get(key) != value:
             fail(f"Saved plan {key} does not match this run and target")
+    if manifest.get("run_id") != os.environ.get("EXPECTED_PLAN_RUN_ID"):
+        fail("Saved plan run ID does not match the approved plan run")
+    if manifest.get("run_attempt") != os.environ.get("EXPECTED_PLAN_RUN_ATTEMPT"):
+        fail("Saved plan attempt does not match the approved plan run")
     if manifest.get("generated_at") != plan["metadata"]["generated_at"]:
         fail("Saved plan generation time differs from audit manifest")
     if manifest.get("summary") != plan["summary"]:

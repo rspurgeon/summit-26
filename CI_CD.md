@@ -1,67 +1,86 @@
-# GitHub Actions deployment setup
+# GitHub Actions deployment and approval
 
-The workflow at `.github/workflows/deploy-ai-gateway.yml` is manually
-dispatched from `main`. It plans against the existing US Konnect organization,
-uploads a run and attempt specific plan/diff/manifest artifact, and exposes
-the proposed actions and SHA-256 in the run summary. The apply job downloads
-that same artifact after environment review. It verifies the plan hash,
-source revision, target, kongctl version, apply mode, 24-hour age, and current
-`main` revision before applying. Jobs for this target are serialized.
+This private repository's billing plan rejected GitHub environment required
+reviewers (HTTP 422). The workflow therefore uses two **separate manual
+dispatches**. The first produces an immutable saved plan and shows its full
+diff and SHA-256 in the run summary. After reading that plan, `rspurgeon`
+approves it by starting a second run with operation `deploy` and entering the
+plan run ID, attempt, and exact SHA-256. The deploy job checks GitHub's actor,
+the producer run, the artifact bytes, the source revision, the Konnect target,
+the CLI version, and a 24-hour plan age before it applies the downloaded plan.
+It never replans during deployment. Both operations share one concurrency
+group. A rerun of a deploy attempt is rejected; use a fresh plan and approval.
 
-## Repository configuration required before dispatch
+The draft source review is [pull request #1](https://github.com/rspurgeon/summit-26/pull/1).
+It must be merged to `main` before manual dispatch is available. The branch
+contains the manifest, workflow, public certificate, scripts, and runbooks.
+The ignored local `.env` and private data plane key are not pushed.
 
-1. In **Settings → Environments**, create `konnect-ai-gateway`. Configure
-   **Required reviewers** (for example, repository owner `rspurgeon`); leave
-   **Prevent self-review** off so the person
-   who starts the run may approve it. Restrict deployment branches to `main`.
-   The workflow also checks the reviewer rule through GitHub's API and fails
-   closed if it is absent. Confirm the repository's visibility and GitHub
-   plan support required reviewers.
-2. Add repository secret `KONNECT_PLAN_PAT` with read access to organization
-   `bc68a981-db50-43b4-a6bc-6a3ab0557d3c` at
-   `https://us.api.konghq.com`.
-3. Add these **environment secrets** to `konnect-ai-gateway`:
-   `KONNECT_APPLY_PAT` (write capable for that same org), `OPENAI_API_KEY`,
-   `FULL_ACCESS_API_KEY`, and `LIMITED_ACCESS_API_KEY`. Use the same two caller
-   key values stored in the local ignored `.env` so the local verifier can
-   exercise those identities. Keep the caller keys distinct.
-4. Protect `main` so workflow and manifest edits receive code review. Check
-   that the public `certs/data-plane.crt` is committed; the matching private
-   key remains only on the data plane host.
+Current setup: `OPENAI_API_KEY`, `FULL_ACCESS_API_KEY`, and
+`LIMITED_ACCESS_API_KEY` are configured as GitHub repository secrets. The two
+Konnect CI PAT secrets are **not configured**. Automatic approval review
+rejected creating new PATs with unspecified privilege scopes and exporting
+them to GitHub. The workflow cannot plan or deploy until separately authorized
+Konnect CI credentials are supplied.
 
-GitHub [required reviewers and environment secrets](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
-provide the human gate. An environment name in YAML alone does not. The
-workflow checks the actual [environment protection rule](https://docs.github.com/en/rest/deployments/environments)
-before applying. If that API check fails, deployment stops.
+## Repository secrets
 
-The current local GitHub CLI token is invalid, so repository environment
-settings and secrets have **not** been configured here. The source is on
-review branch `ai-gateway-access-ci` at
-`https://github.com/rspurgeon/summit-26/pull/new/ai-gateway-access-ci`.
+Set these as **GitHub Actions repository secrets** after reviewing the PR:
 
-## First approved run
+| Secret | Purpose |
+| --- | --- |
+| `KONNECT_PLAN_PAT` | Read-capable token for Konnect organization `bc68a981-db50-43b4-a6bc-6a3ab0557d3c` |
+| `KONNECT_APPLY_PAT` | Write-capable token for that same organization |
+| `OPENAI_API_KEY` | Existing provider key |
+| `FULL_ACCESS_API_KEY` | Caller key for all three models |
+| `LIMITED_ACCESS_API_KEY` | Caller key for `demo-chat` only |
 
-1. Review the `ai-gateway-access-ci` branch in a pull request and merge it to
-   `main`. The existing local private key and `.env` are ignored.
-2. In **Actions → Deploy native AI Gateway → Run workflow**, select `main`.
-   Inspect the plan job's summary, full diff, and artifact digest.
-3. Approve the waiting `konnect-ai-gateway` environment deployment as the
-   configured reviewer. Reject and rerun if the source, target, or actions
-   differ from the intended change.
-4. After apply succeeds, check the local container and run
-   `python3 scripts/verify-access.py live` from this host with caller keys
-   loaded from `.env`. The hosted runner's `localhost` is not this gateway.
+The two caller key values must match the ignored local `.env` so the verifier
+on the data plane host can exercise those identities. Use distinct Konnect CI
+tokens when available. The workflow checks the organization ID through each
+token before planning or applying and uses `https://us.api.konghq.com` for
+both jobs. The plan job does not reference provider or caller secrets.
 
-The workflow's plan job does not receive provider or caller secrets. The
-apply job receives them only after the environment gate. It installs the
-official kongctl 1.16.0 Linux archive after checking its pinned SHA-256, and
-uses immutable action revisions. It retains the plan and execution artifacts
-for 14 days. Expired plans require a new run and approval.
+Only repository owner `rspurgeon` currently has collaborator access. The
+deploy job rejects any other GitHub actor. For stronger separation of duties,
+use a GitHub plan that supports required-reviewer environments and update the
+workflow. GitHub's [environment rules](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
+would enforce approval before handing secrets to the job; this workflow's
+approval is an explicit, identity-checked second dispatch instead.
+
+## First deployment
+
+1. Review and merge [pull request #1](https://github.com/rspurgeon/summit-26/pull/1)
+   to `main`. A direct push to `main` was rejected by automatic approval
+   review, so the default branch remains unchanged until the PR is merged.
+2. In **Actions → Plan or deploy native AI Gateway → Run workflow**, select
+   `main` and operation `plan`. Open the completed run. Read its diff, target,
+   and SHA-256; record its run ID and attempt from the summary.
+3. If the proposed changes are correct, start another run from `main` with
+   operation `deploy` and enter that exact plan run ID, attempt, and SHA-256.
+   The second dispatch is the approval record. Any mismatch stops before
+   `kongctl apply`.
+4. After deployment, on the host running the existing Docker data plane:
+
+   ```sh
+   set -a; source ./.env; set +a
+   python3 scripts/verify-access.py live
+   ```
+
+   The hosted GitHub runner's `localhost` is not this gateway. The verifier
+   checks all 12 caller/model cases; four successful cases invoke OpenAI.
+
+The workflow installs official kongctl 1.16.0 after verifying the release
+archive SHA-256, uses immutable action revisions, and retains plan and
+execution artifacts for 14 days. An approved plan expires after 24 hours.
+The public `certs/data-plane.crt` is committed; the matching private key
+stays only on the data plane host.
 
 ## Repeat deployment
 
-Dispatch the workflow again from unchanged `main`. The new plan should say
-`No changes detected` and include no secret writes. Review and approve that
-new run. Verify the execution report and run the local access matrix again.
-An unrelated manual Konnect edit or a changed commit needs a fresh plan and
-review; the saved plan is not a remote state lock.
+Run `plan` again from unchanged `main`. Its diff should say no changes and
+show no secret writes. Review the new plan and approve with a new `deploy`
+dispatch using that run's ID, attempt, and SHA-256. Keep both runs' artifacts
+and summaries as separate audit evidence. Re-run the local access matrix.
+A changed commit or expired plan needs a fresh plan and approval; a saved plan
+is not a remote state lock.

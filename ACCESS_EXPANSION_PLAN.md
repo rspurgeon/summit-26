@@ -27,10 +27,11 @@ kongctl diff --plan .plans/access-expansion.json --profile default --region us \
 ```
 
 The GitHub Actions workflow will create its own saved plan from the committed
-revision, publish the exact diff and hash, wait for a configured environment
-reviewer, then apply the downloaded artifact after verifying its identity.
-The local saved plan is a review preview; it is not substituted for the CI
-artifact. The local Docker data plane stays on this host.
+revision and publish its exact diff and hash. After human review, a separate
+identity-checked `deploy` dispatch names that plan run and hash; it applies
+the downloaded artifact after verifying its identity. The local saved plan
+is a review preview, not a substitute for the CI artifact. The local Docker
+data plane stays on this host. See [CI_CD.md](CI_CD.md).
 
 After approval and application, run `python3 scripts/verify-access.py live`
 on this host. The expected matrix is:

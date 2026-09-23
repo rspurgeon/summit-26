@@ -1,12 +1,29 @@
-name: Deploy native AI Gateway
+name: Plan or deploy native AI Gateway
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Plan first; deploy only after reviewing a plan run
+        required: true
+        type: choice
+        options: [plan, deploy]
+      plan_run_id:
+        description: Deploy only - reviewed plan workflow run ID
+        required: false
+        type: string
+      plan_run_attempt:
+        description: Deploy only - reviewed plan run attempt
+        required: false
+        type: string
+      plan_sha256:
+        description: Deploy only - exact SHA-256 shown in the plan summary
+        required: false
+        type: string
 
 permissions:
   contents: read
   actions: read
-  deployments: write
 
 concurrency:
   group: konnect-ai-gateway-us-summit-ai-demo
@@ -19,11 +36,9 @@ env:
 
 jobs:
   plan:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && inputs.operation == 'plan'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    outputs:
-      plan_sha256: ${{ steps.audit.outputs.plan_sha256 }}
     steps:
       - name: Check out the dispatched revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -57,15 +72,17 @@ jobs:
             echo '## Native AI Gateway apply plan'
             echo
             echo "Source: \`$GITHUB_SHA\`"
+            echo "Plan run ID: \`$GITHUB_RUN_ID\` attempt \`$GITHUB_RUN_ATTEMPT\`"
             echo "Target: \`$KONNECT_BASE_URL\`, organization \`$KONNECT_ORG_ID\`, namespace \`summit-ai-demo\`"
             echo "kongctl: \`1.16.0\`"
             echo "Plan SHA-256: \`${{ steps.audit.outputs.plan_sha256 }}\`"
+            echo 'To approve, dispatch this workflow again with operation `deploy` and enter the plan run ID, attempt, and exact SHA-256.'
             echo
             echo '```text'
             cat audit/plan-diff.txt
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-      - name: Upload reviewed plan and audit manifest
+      - name: Upload saved plan and audit manifest
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ai-gateway-plan-${{ github.run_id }}-${{ github.run_attempt }}
@@ -76,40 +93,59 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  apply:
-    needs: plan
-    if: github.ref == 'refs/heads/main'
+  deploy:
+    if: github.ref == 'refs/heads/main' && inputs.operation == 'deploy'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
-    environment:
-      name: konnect-ai-gateway
     steps:
-      - name: Check out the reviewed revision
+      - name: Verify human approval identity and exact plan selection
+        env:
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
+          EXPECTED_PLAN_SHA256: ${{ inputs.plan_sha256 }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTOR" = rspurgeon
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          [[ "$PLAN_RUN_ID" =~ ^[0-9]+$ ]]
+          [[ "$PLAN_RUN_ATTEMPT" =~ ^[0-9]+$ ]]
+          [[ "$EXPECTED_PLAN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          echo "Approval recorded from $GITHUB_ACTOR for plan $PLAN_RUN_ID attempt $PLAN_RUN_ATTEMPT"
+      - name: Check out the reviewed source revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: Verify that environment approval is enforced
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: python3 scripts/check-environment.py
-      - name: Reject a superseded source revision
+      - name: Verify producer run and reject superseded source
         env:
           GH_TOKEN: ${{ github.token }}
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           current_sha="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"
           test "$current_sha" = "$GITHUB_SHA"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN_ID" |
+            jq -e --arg sha "$GITHUB_SHA" --arg attempt "$PLAN_RUN_ATTEMPT" '
+              .conclusion == "success" and .event == "workflow_dispatch" and
+              .head_branch == "main" and .head_sha == $sha and
+              .run_attempt == ($attempt | tonumber) and
+              (.path | startswith(".github/workflows/deploy-ai-gateway.yml@"))
+            ' >/dev/null
       - name: Install pinned kongctl
         run: bash scripts/install-kongctl.sh
-      - name: Download this run's saved plan
+      - name: Download the explicitly approved plan artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: ai-gateway-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ai-gateway-plan-${{ inputs.plan_run_id }}-${{ inputs.plan_run_attempt }}
+          run-id: ${{ inputs.plan_run_id }}
+          github-token: ${{ github.token }}
           path: audit
       - name: Verify reviewed plan and Konnect organization
         env:
-          EXPECTED_PLAN_SHA256: ${{ needs.plan.outputs.plan_sha256 }}
+          EXPECTED_PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          EXPECTED_PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          EXPECTED_PLAN_RUN_ATTEMPT: ${{ inputs.plan_run_attempt }}
           KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_APPLY_PAT }}
         run: |
           set -euo pipefail
@@ -137,11 +173,16 @@ jobs:
             --execution-report-file audit/apply-report.json
       - name: Record execution outcome
         if: always()
+        env:
+          PLAN_RUN_ID: ${{ inputs.plan_run_id }}
+          EXPECTED_PLAN_SHA256: ${{ inputs.plan_sha256 }}
         run: |
           {
             echo '## Native AI Gateway execution'
+            echo "Approving GitHub actor: \`$GITHUB_ACTOR\`"
             echo "Source: \`$GITHUB_SHA\`"
-            echo "Reviewed plan SHA-256: \`${{ needs.plan.outputs.plan_sha256 }}\`"
+            echo "Reviewed plan run: \`$PLAN_RUN_ID\`"
+            echo "Reviewed plan SHA-256: \`$EXPECTED_PLAN_SHA256\`"
             echo "Job status: \`${{ job.status }}\`"
             echo 'Traffic verification runs on the local data plane host.'
           } >> "$GITHUB_STEP_SUMMARY"
