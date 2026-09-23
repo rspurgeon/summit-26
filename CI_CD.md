@@ -11,7 +11,8 @@ source revision, target, kongctl version, apply mode, 24-hour age, and current
 ## Repository configuration required before dispatch
 
 1. In **Settings → Environments**, create `konnect-ai-gateway`. Configure
-   **Required reviewers**; leave **Prevent self-review** off so the person
+   **Required reviewers** (for example, repository owner `rspurgeon`); leave
+   **Prevent self-review** off so the person
    who starts the run may approve it. Restrict deployment branches to `main`.
    The workflow also checks the reviewer rule through GitHub's API and fails
    closed if it is absent. Confirm the repository's visibility and GitHub
@@ -34,14 +35,14 @@ workflow checks the actual [environment protection rule](https://docs.github.com
 before applying. If that API check fails, deployment stops.
 
 The current local GitHub CLI token is invalid, so repository environment
-settings and secrets have **not** been configured here. The repository remote
-is `git@github.com:rspurgeon/summit-26.git`; Git over SSH is reachable.
+settings and secrets have **not** been configured here. The source is on
+review branch `ai-gateway-access-ci` at
+`https://github.com/rspurgeon/summit-26/pull/new/ai-gateway-access-ci`.
 
 ## First approved run
 
-1. Review and commit the manifest, public certificate, scripts, and workflow
-   on `main`; push to GitHub. The existing local private key and `.env` are
-   ignored.
+1. Review the `ai-gateway-access-ci` branch in a pull request and merge it to
+   `main`. The existing local private key and `.env` are ignored.
 2. In **Actions → Deploy native AI Gateway → Run workflow**, select `main`.
    Inspect the plan job's summary, full diff, and artifact digest.
 3. Approve the waiting `konnect-ai-gateway` environment deployment as the
