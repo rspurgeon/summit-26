@@ -1,0 +1,157 @@
+name: Deploy native AI Gateway
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: write
+
+concurrency:
+  group: konnect-ai-gateway-us-summit-ai-demo
+  cancel-in-progress: false
+
+env:
+  KONNECT_BASE_URL: https://us.api.konghq.com
+  KONNECT_ORG_ID: bc68a981-db50-43b4-a6bc-6a3ab0557d3c
+  KONGCTL_NO_TELEMETRY: "true"
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      plan_sha256: ${{ steps.audit.outputs.plan_sha256 }}
+    steps:
+      - name: Check out the dispatched revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Install pinned kongctl
+        run: bash scripts/install-kongctl.sh
+      - name: Confirm source, target, and plan scope
+        env:
+          KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_PLAN_PAT }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -n "$KONGCTL_DEFAULT_KONNECT_PAT"
+          test "$(kongctl version --full | cut -d ' ' -f 1)" = 1.16.0
+          actual_org="$(kongctl get organization --profile default --base-url "$KONNECT_BASE_URL" \
+            -o json --jq '.id' --jq-raw-output)"
+          test "$actual_org" = "$KONNECT_ORG_ID"
+          mkdir -p audit
+          kongctl plan --mode apply -f ai-gateway.yaml \
+            --require-namespace summit-ai-demo --profile default \
+            --base-url "$KONNECT_BASE_URL" --output-file audit/plan.json
+          kongctl diff --plan audit/plan.json --profile default \
+            --base-url "$KONNECT_BASE_URL" > audit/plan-diff.txt
+      - name: Record plan identity
+        id: audit
+        run: python3 scripts/plan-audit.py write
+      - name: Expose exact proposed actions to reviewers
+        run: |
+          {
+            echo '## Native AI Gateway apply plan'
+            echo
+            echo "Source: \`$GITHUB_SHA\`"
+            echo "Target: \`$KONNECT_BASE_URL\`, organization \`$KONNECT_ORG_ID\`, namespace \`summit-ai-demo\`"
+            echo "kongctl: \`1.16.0\`"
+            echo "Plan SHA-256: \`${{ steps.audit.outputs.plan_sha256 }}\`"
+            echo
+            echo '```text'
+            cat audit/plan-diff.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload reviewed plan and audit manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-gateway-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            audit/plan.json
+            audit/plan-diff.txt
+            audit/manifest.json
+          if-no-files-found: error
+          retention-days: 14
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment:
+      name: konnect-ai-gateway
+    steps:
+      - name: Check out the reviewed revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Verify that environment approval is enforced
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/check-environment.py
+      - name: Reject a superseded source revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          current_sha="$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq '.commit.sha')"
+          test "$current_sha" = "$GITHUB_SHA"
+      - name: Install pinned kongctl
+        run: bash scripts/install-kongctl.sh
+      - name: Download this run's saved plan
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ai-gateway-plan-${{ github.run_id }}-${{ github.run_attempt }}
+          path: audit
+      - name: Verify reviewed plan and Konnect organization
+        env:
+          EXPECTED_PLAN_SHA256: ${{ needs.plan.outputs.plan_sha256 }}
+          KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_APPLY_PAT }}
+        run: |
+          set -euo pipefail
+          test -n "$KONGCTL_DEFAULT_KONNECT_PAT"
+          test "$(kongctl version --full | cut -d ' ' -f 1)" = 1.16.0
+          python3 scripts/plan-audit.py verify
+          actual_org="$(kongctl get organization --profile default --base-url "$KONNECT_BASE_URL" \
+            -o json --jq '.id' --jq-raw-output)"
+          test "$actual_org" = "$KONNECT_ORG_ID"
+      - name: Apply only the reviewed saved plan
+        env:
+          KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_APPLY_PAT }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FULL_ACCESS_API_KEY: ${{ secrets.FULL_ACCESS_API_KEY }}
+          LIMITED_ACCESS_API_KEY: ${{ secrets.LIMITED_ACCESS_API_KEY }}
+        run: |
+          set -euo pipefail
+          : "${KONGCTL_DEFAULT_KONNECT_PAT:?Missing Konnect apply PAT}"
+          : "${OPENAI_API_KEY:?Missing OpenAI key}"
+          : "${FULL_ACCESS_API_KEY:?Missing full-access caller key}"
+          : "${LIMITED_ACCESS_API_KEY:?Missing limited-access caller key}"
+          test "$FULL_ACCESS_API_KEY" != "$LIMITED_ACCESS_API_KEY"
+          kongctl apply --plan audit/plan.json --profile default \
+            --base-url "$KONNECT_BASE_URL" --auto-approve \
+            --execution-report-file audit/apply-report.json
+      - name: Record execution outcome
+        if: always()
+        run: |
+          {
+            echo '## Native AI Gateway execution'
+            echo "Source: \`$GITHUB_SHA\`"
+            echo "Reviewed plan SHA-256: \`${{ needs.plan.outputs.plan_sha256 }}\`"
+            echo "Job status: \`${{ job.status }}\`"
+            echo 'Traffic verification runs on the local data plane host.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Retain execution report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-gateway-execution-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            audit/manifest.json
+            audit/apply-report.json
+          if-no-files-found: warn
+          retention-days: 14

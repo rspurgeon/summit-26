@@ -1,0 +1,148 @@
+_defaults:
+  kongctl:
+    namespace: summit-ai-demo
+
+ai_gateways:
+  - ref: summit-ai-demo
+    name: summit-ai-demo
+    display_name: Summit AI Demo
+    description: Local OpenAI-backed native AI Gateway
+    deployment_type: hybrid
+    proxy_urls:
+      - host: localhost
+        port: 8000
+        protocol: http
+    data_plane_certificates:
+      - ref: summit-ai-demo-data-plane
+        title: summit-ai-demo-data-plane
+        description: Local Docker data plane
+        cert: !file ./certs/data-plane.crt
+    model_providers:
+      - ref: openai
+        name: openai
+        display_name: OpenAI
+        type: openai
+        config:
+          auth:
+            type: basic
+            headers:
+              - name: Authorization
+                value: !secret
+                  parts:
+                    - "Bearer "
+                    - !env OPENAI_API_KEY
+    auth_strategies:
+      - ref: client-key-auth
+        name: client-key-auth
+        display_name: Client Key Authentication
+        type: key-auth
+        config:
+          key_names: [apikey]
+          hide_credentials: true
+    consumers:
+      - ref: full-access
+        name: full-access
+        display_name: Full Access
+        custom_id: full-access
+        type: api-key
+        credentials:
+          - ref: full-access-key
+            name: full-access-key
+            display_name: Full Access Key
+            type: api-key
+            ttl: 0
+            api_key: !secret {source: !env FULL_ACCESS_API_KEY}
+      - ref: limited-access
+        name: limited-access
+        display_name: Limited Access
+        custom_id: limited-access
+        type: api-key
+        credentials:
+          - ref: limited-access-key
+            name: limited-access-key
+            display_name: Limited Access Key
+            type: api-key
+            ttl: 0
+            api_key: !secret {source: !env LIMITED_ACCESS_API_KEY}
+    models:
+      - ref: demo-chat
+        name: demo-chat
+        display_name: Demo Chat
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths:
+              - /v1
+            model:
+              body_param: model
+              values:
+                - demo-chat
+        targets:
+          - name: gpt-4.1-mini
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities:
+          - generate
+        access:
+          auth_strategies:
+            - !ref client-key-auth
+          acls:
+            allow: [full-access, limited-access]
+      - ref: budget-chat
+        name: budget-chat
+        display_name: Budget Chat
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths: [/v1]
+            model:
+              body_param: model
+              values: [budget-chat]
+        targets:
+          - name: gpt-4o-mini
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities: [generate]
+        access:
+          auth_strategies:
+            - !ref client-key-auth
+          acls:
+            allow: [full-access]
+      - ref: advanced-chat
+        name: advanced-chat
+        display_name: Advanced Chat
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths: [/v1]
+            model:
+              body_param: model
+              values: [advanced-chat]
+        targets:
+          - name: gpt-4.1
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities: [generate]
+        access:
+          auth_strategies:
+            - !ref client-key-auth
+          acls:
+            allow: [full-access]
