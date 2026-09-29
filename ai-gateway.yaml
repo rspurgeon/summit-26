@@ -1,0 +1,58 @@
+_defaults:
+  kongctl:
+    namespace: summit-ai-demo
+
+ai_gateways:
+  - ref: summit-ai-demo
+    name: summit-ai-demo
+    display_name: Summit AI Demo
+    description: Local OpenAI-backed AI Gateway
+    deployment_type: hybrid
+    proxy_urls:
+      - host: localhost
+        port: 8000
+        protocol: http
+    data_plane_certificates:
+      - ref: summit-ai-demo-data-plane
+        title: summit-ai-demo-data-plane
+        description: Local Docker data plane
+        cert: !file ./certs/data-plane.crt
+    model_providers:
+      - ref: openai
+        name: openai
+        display_name: OpenAI
+        type: openai
+        config:
+          auth:
+            type: basic
+            headers:
+              - name: Authorization
+                value: !secret
+                  parts:
+                    - "Bearer "
+                    - !env OPENAI_API_KEY
+    models:
+      - ref: demo-chat
+        name: demo-chat
+        display_name: Demo Chat
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths:
+              - /v1
+            model:
+              body_param: model
+              values:
+                - demo-chat
+        targets:
+          - name: gpt-4o-mini
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities:
+          - generate
