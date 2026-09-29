@@ -1,0 +1,204 @@
+{
+  "metadata": {
+    "version": "1.1",
+    "generated_at": "2026-09-29T21:59:02.134119Z",
+    "generator": "kongctl/1.19.0",
+    "mode": "apply"
+  },
+  "changes": [
+    {
+      "id": "1:c:ai_gateway:summit-ai-demo",
+      "resource_type": "ai_gateway",
+      "resource_ref": "summit-ai-demo",
+      "action": "CREATE",
+      "fields": {
+        "deployment_type": "hybrid",
+        "description": "Local OpenAI-backed AI Gateway",
+        "display_name": "Summit AI Demo",
+        "name": "summit-ai-demo",
+        "proxy_urls": [
+          {
+            "host": "localhost",
+            "port": 8000,
+            "protocol": "http"
+          }
+        ]
+      },
+      "protection": false,
+      "namespace": "summit-ai-demo"
+    },
+    {
+      "id": "2:c:ai_gateway_data_plane_certificate:summit-ai-demo-data-plane",
+      "resource_type": "ai_gateway_data_plane_certificate",
+      "resource_ref": "summit-ai-demo-data-plane",
+      "action": "CREATE",
+      "fields": {
+        "cert": "-----BEGIN CERTIFICATE-----\nMIIC3jCCAcYCCQD93439CLwPzzANBgkqhkiG9w0BAQsFADAxMSIwIAYDVQQDDBlz\ndW1taXQtYWktZGVtby1kYXRhLXBsYW5lMQswCQYDVQQGEwJVUzAeFw0yNjA5Mjky\nMTU4NTNaFw0yNzA5MjkyMTU4NTNaMDExIjAgBgNVBAMMGXN1bW1pdC1haS1kZW1v\nLWRhdGEtcGxhbmUxCzAJBgNVBAYTAlVTMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8A\nMIIBCgKCAQEAvhUDqjbDrt09jyT1mj1D/ForFM4qYI5m+vCS8h4qJiUPszdAokay\n6/qQ6s0/l5VuGzi+3n16PWeXPipTmtAfa7JEhPcuatqTO/gzuLEZuDf2nvLNFVGO\n+S6V4qIoWxkru5cZW17m51n8Ojz9Ar111izoNPivgvkEALJxXAey+hI5qZ3vpOtN\n3YU4Yo8TSvybjRkGR/jhbnXIWAdq4yFgl4NbYdgdOluotUatNLQTfa5SEQbecLDq\np/qVKfJD+ywTzjVNRPX64efEDc+C9pV9jGGdDgMmjGii3zocdGVfx+StiFbIk/6y\nQMPY+czH139hIhlk54PokzvwjiBS9MPt2wIDAQABMA0GCSqGSIb3DQEBCwUAA4IB\nAQBd4fmkEWg+Sp0Q7nJSo9Nn2cP31XexCFuyxq8BoeFCZLnP521/XBSiEFRBzefx\nZXPcXb+JZaWQ/e0gzEaDMMsfdMklurInFUBBdS+3c+7xLGHabFikRLQXLAQDKE8X\n+BwO0+bpL7blzMlddBjSdbwssws0IzWUhdXhyPeG6FO4gTuFwygoO4hQSv5j1VDD\ng4AolaZP12KWTn8IFT5m4cBxAezWRLmEBcovVdilS+FPQ5sSmxFFhuaWGFRszzAG\nOuMIJO/2rCdhh6Bbni1/Vb8smwtftLKDSPEUY31rkwnxZ9gT8u9auz0fgHyOKx29\nBCV8x+6wzOwtrnTSj0M26fEz\n-----END CERTIFICATE-----\n",
+        "description": "Local Docker data plane",
+        "title": "summit-ai-demo-data-plane"
+      },
+      "references": {
+        "ai_gateway_id": {
+          "ref": "summit-ai-demo",
+          "lookup_fields": {
+            "name": "summit-ai-demo"
+          }
+        }
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:ai_gateway:summit-ai-demo"
+      ]
+    },
+    {
+      "id": "3:c:ai_gateway_model_provider:openai",
+      "resource_type": "ai_gateway_model_provider",
+      "resource_ref": "openai",
+      "action": "CREATE",
+      "fields": {
+        "config": {
+          "auth": {
+            "headers": [
+              {
+                "name": "Authorization"
+              }
+            ],
+            "type": "basic"
+          }
+        },
+        "display_name": "OpenAI",
+        "name": "openai",
+        "type": "openai"
+      },
+      "references": {
+        "ai_gateway_id": {
+          "ref": "summit-ai-demo",
+          "lookup_fields": {
+            "name": "summit-ai-demo"
+          }
+        }
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:ai_gateway:summit-ai-demo",
+        "2:c:ai_gateway_data_plane_certificate:summit-ai-demo-data-plane"
+      ],
+      "secret_writes": [
+        {
+          "field": "/config/auth/headers/0/value",
+          "expression": {
+            "parts": [
+              {
+                "literal": "Bearer "
+              },
+              {
+                "source": {
+                  "kind": "env",
+                  "reference": "OPENAI_API_KEY"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "4:c:ai_gateway_model:demo-chat",
+      "resource_type": "ai_gateway_model",
+      "resource_ref": "demo-chat",
+      "action": "CREATE",
+      "fields": {
+        "capabilities": [
+          "generate"
+        ],
+        "config": {
+          "max_request_body_size": 8388608,
+          "response_streaming": "allow",
+          "route": {
+            "https_redirect_status_code": 426,
+            "model": {
+              "body_param": "model",
+              "values": [
+                "demo-chat"
+              ]
+            },
+            "paths": [
+              "/v1"
+            ],
+            "preserve_host": false,
+            "regex_priority": 0,
+            "request_buffering": true,
+            "response_buffering": true,
+            "strip_path": true
+          }
+        },
+        "display_name": "Demo Chat",
+        "enabled": true,
+        "formats": [
+          {
+            "type": "openai"
+          }
+        ],
+        "name": "demo-chat",
+        "targets": [
+          {
+            "allow_auth_override": false,
+            "config": {
+              "type": "openai"
+            },
+            "name": "gpt-4o-mini",
+            "provider": "openai",
+            "weight": 100
+          }
+        ],
+        "type": "model"
+      },
+      "references": {
+        "ai_gateway_id": {
+          "ref": "summit-ai-demo",
+          "lookup_fields": {
+            "name": "summit-ai-demo"
+          }
+        }
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:ai_gateway:summit-ai-demo",
+        "3:c:ai_gateway_model_provider:openai"
+      ]
+    }
+  ],
+  "execution_order": [
+    "1:c:ai_gateway:summit-ai-demo",
+    "2:c:ai_gateway_data_plane_certificate:summit-ai-demo-data-plane",
+    "3:c:ai_gateway_model_provider:openai",
+    "4:c:ai_gateway_model:demo-chat"
+  ],
+  "execution_groups": [
+    [
+      "1:c:ai_gateway:summit-ai-demo"
+    ],
+    [
+      "2:c:ai_gateway_data_plane_certificate:summit-ai-demo-data-plane"
+    ],
+    [
+      "3:c:ai_gateway_model_provider:openai"
+    ],
+    [
+      "4:c:ai_gateway_model:demo-chat"
+    ]
+  ],
+  "summary": {
+    "total_changes": 4,
+    "by_action": {
+      "CREATE": 4
+    },
+    "by_resource": {
+      "ai_gateway": 1,
+      "ai_gateway_data_plane_certificate": 1,
+      "ai_gateway_model": 1,
+      "ai_gateway_model_provider": 1
+    },
+    "secret_writes": 1
+  }
+}
