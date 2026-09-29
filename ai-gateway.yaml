@@ -56,3 +56,27 @@ ai_gateways:
         policies: []
         capabilities:
           - generate
+      - ref: budget-chat
+        name: budget-chat
+        display_name: Budget Chat
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths:
+              - /v1
+            model:
+              body_param: model
+              values:
+                - budget-chat
+        targets:
+          - name: gpt-4.1-nano
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities:
+          - generate

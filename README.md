@@ -1,6 +1,6 @@
 # Local Kong AI Gateway with OpenAI
 
-This project declares one Konnect AI Gateway in the `summit-ai-demo` namespace. Its local Docker data plane serves OpenAI-compatible chat requests at `http://127.0.0.1:8000/v1/chat/completions`. The public model alias is `demo-chat`; it routes to the verified OpenAI model `gpt-4o-mini`.
+This project declares one Konnect AI Gateway in the `summit-ai-demo` namespace. Its local Docker data plane serves OpenAI-compatible chat requests at `http://127.0.0.1:8000/v1/chat/completions`. The model aliases are `demo-chat` for `gpt-4o-mini` and `budget-chat` for `gpt-4.1-nano`.
 
 ## Inputs and local files
 
@@ -11,9 +11,9 @@ This project declares one Konnect AI Gateway in the `summit-ai-demo` namespace. 
 
 The existing certificate pair can be checked with `bash data-plane.sh check`. If starting from a fresh checkout, run `bash data-plane.sh certs` before planning. Keep this pair when reusing the same gateway.
 
-## Review and apply
+## Local review and apply
 
-Load the local environment in every shell used for kongctl commands. The `.env` file must be trusted shell-compatible input.
+Use kongctl 1.17.1 and load the local environment in every shell used for kongctl commands. The `.env` file must be trusted shell-compatible input.
 
 ```sh
 set -a
@@ -23,13 +23,7 @@ export KONGCTL_DEFAULT_KONNECT_PAT="$KONNECT_TOKEN"
 mkdir -p .plans .artifacts
 ```
 
-The saved plan at `.plans/apply.json` was generated for this manifest and Konnect region. Review it with:
-
-```sh
-kongctl --log-file .artifacts/kongctl.log diff --plan .plans/apply.json -o text
-```
-
-If the manifest, certificate, account, or region changes, generate a new plan and review its diff before applying:
+Generate a fresh plan for the current manifest and region, then review its diff before applying locally:
 
 ```sh
 kongctl --log-file .artifacts/kongctl.log plan --mode apply \
@@ -75,13 +69,15 @@ curl --fail-with-body --silent --show-error --max-time 60 \
   | jq -e '.choices[0].message.content | select(type == "string" and length > 0)'
 ```
 
+After deploying the additional model, use `"model":"budget-chat"` in the same request body to route to `gpt-4.1-nano`.
+
 Stop only this local node with `bash data-plane.sh stop`. To remove the Konnect gateway later, create and review a `--mode delete` plan for `summit-ai-demo` before running `kongctl delete --plan`; deletion includes its child resources. Keep the certificate pair if you intend to redeploy it.
 
 ## Deploy later changes through GitHub Actions
 
 The manual [deployment workflow](.github/workflows/deploy-ai-gateway.yaml) runs only from this repository's default branch. It checks the SHA-256 of committed `ci/plan.json`, verifies the plan's `kongctl` version, apply mode, and namespace, confirms the Konnect organization, and applies the reviewed plan. It uses the existing GitHub secrets `KONNECT_APPLY_PAT` and `OPENAI_API_KEY`. The run uploads its diff and execution report as a short-lived artifact.
 
-The initial committed plan is a **zero-change workflow check**. It verifies the deployment path without changing the already running gateway. Its hash is printed by `shasum -a 256 ci/plan.json`; review the diff before dispatching it. The workflow must be merged into `main` before its first dispatch.
+The committed plan is the next reviewed change for this gateway. Its hash is printed by `shasum -a 256 ci/plan.json`; review the diff before dispatching it. The workflow reads the plan from `main`, so the plan and manifest must be merged there before dispatch.
 
 For each later configuration change, use **kongctl 1.17.1** locally, edit `ai-gateway.yaml`, and generate a new apply-mode plan against the same organization and region:
 
