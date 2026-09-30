@@ -1,15 +1,15 @@
 {
   "metadata": {
     "version": "1.1",
-    "generated_at": "2026-09-30T00:22:12.255654Z",
+    "generated_at": "2026-09-30T00:28:02.183421Z",
     "generator": "kongctl/1.19.0",
     "mode": "apply"
   },
   "changes": [
     {
-      "id": "1:c:ai_gateway_model:demo-nano",
+      "id": "1:c:ai_gateway_model:demo-mini",
       "resource_type": "ai_gateway_model",
-      "resource_ref": "demo-nano",
+      "resource_ref": "demo-mini",
       "action": "CREATE",
       "fields": {
         "capabilities": [
@@ -23,7 +23,7 @@
             "model": {
               "body_param": "model",
               "values": [
-                "demo-nano"
+                "demo-mini"
               ]
             },
             "paths": [
@@ -36,21 +36,21 @@
             "strip_path": true
           }
         },
-        "display_name": "Demo Nano",
+        "display_name": "Demo Mini",
         "enabled": true,
         "formats": [
           {
             "type": "openai"
           }
         ],
-        "name": "demo-nano",
+        "name": "demo-mini",
         "targets": [
           {
             "allow_auth_override": false,
             "config": {
               "type": "openai"
             },
-            "name": "gpt-4.1-nano",
+            "name": "gpt-4.1-mini",
             "provider": "openai",
             "weight": 100
           }
@@ -71,11 +71,11 @@
     }
   ],
   "execution_order": [
-    "1:c:ai_gateway_model:demo-nano"
+    "1:c:ai_gateway_model:demo-mini"
   ],
   "execution_groups": [
     [
-      "1:c:ai_gateway_model:demo-nano"
+      "1:c:ai_gateway_model:demo-mini"
     ]
   ],
   "summary": {
