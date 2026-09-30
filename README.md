@@ -52,7 +52,7 @@ When merging updates `ci/plan.json` on `main`, deployment validates the additive
 
 Run the workflow manually for a read-only drift check. **Fail if configuration drift is detected** defaults to enabled. Disable it to report drift without failing the run. Drift generates a temporary sync-mode plan to detect changes in declared resource collections, displays its diff, and never applies or commits it. Local certificate management remains separate in `local-dataplane.yaml`.
 
-PR automation runs only for branches in this repository, using job-scoped `contents: write` and `pull-requests: write`. Deployment and drift use read-only GitHub permissions. The existing repository-wide permissions and branch rules are unchanged; no extra GitHub PAT or automatic PR approval is required. Bot plan commits do not require another planning run. Deployment and drift share a concurrency group.
+PR automation runs only for branches in this repository, using job-scoped `contents: write` and `pull-requests: write`. Deployment and drift use read-only GitHub permissions. The existing repository-wide permissions and branch rules are unchanged; no extra GitHub PAT or automatic PR approval is required. Bot events are excluded from planning so a bot-generated follow-up run cannot create a loop. GitHub may mark that follow-up run as requiring approval; it does not need approval because the preceding planning run already saved and posted the plan. Deployment and drift share a concurrency group.
 
 The workflow configures Konnect; it does not start Docker on your laptop. Commit and push the workflow and helpers to make the automation available on GitHub. The first configuration PR will create `ci/plan.json`; no initial deployment plan is seeded on main.
 
