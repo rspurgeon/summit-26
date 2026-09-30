@@ -5,8 +5,8 @@ configuration managed by kongctl. Konnect hosts the control plane in the region
 specified by `KONNECT_REGION`; inference enters through your local data plane.
 
 `ai-gateway.yaml` owns namespace `summit-ai`, gateway `Summit AI`, an OpenAI
-provider, a public data plane certificate, and model alias `demo-chat` targeting
-`gpt-4.1-mini`. The proxy binds to loopback on ports 8000 and 8443. The demo has
+provider, a public data plane certificate, and two model aliases: `demo-chat`
+targeting `gpt-4.1-mini` and `demo-nano` targeting `gpt-4.1-nano`. The proxy binds to loopback on ports 8000 and 8443. The demo has
 no caller authentication. The OpenAI key is a deferred `!secret`, supplied at
 apply time, and is never sent by callers.
 
@@ -67,7 +67,8 @@ bash gateway.sh smoke
 This makes a small paid OpenAI request and requires a nonempty assistant
 completion. It saves sanitized evidence in `.artifacts/inference-check.json`.
 Clients use `http://127.0.0.1:8000/v1/chat/completions`, model `demo-chat`,
-and the standard OpenAI chat JSON body. No provider key is needed in a client
+and the standard OpenAI chat JSON body. Use model `demo-nano` to select the
+smaller upstream model through the same endpoint. No provider key is needed in a client
 header. If readiness fails, inspect `docker logs summit-ai-data-plane` and
 the Konnect node status before retrying inference.
 
