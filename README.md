@@ -4,6 +4,7 @@ This project manages a native Konnect AI Gateway with kongctl. Its data plane
 runs locally in Docker, using the Konnect configuration and telemetry channels.
 The `demo-chat` request alias routes to OpenAI `gpt-4o-mini`.
 The `demo-nano` alias routes to `gpt-4.1-nano`, another low-cost model.
+The `demo-mini` alias routes to `gpt-4.1-mini` once its saved plan is deployed.
 
 Use kongctl 1.19.0, Docker, OpenSSL, curl and jq. The data plane image is
 `kong/kong-ai-gateway:2.0.3`. The configuration follows Kong's
@@ -12,7 +13,7 @@ Use kongctl 1.19.0, Docker, OpenSSL, curl and jq. The data plane image is
 Put `OPENAI_API_KEY`, `KONNECT_PAT`, and `KONNECT_REGION` in the trusted,
 shell-compatible `.env` file, or export them. `gateway.sh` loads `.env` and
 maps `KONNECT_PAT` to `KONGCTL_DEFAULT_KONNECT_PAT`. It uses the `default`
-profile and the explicit region. GitHub secrets are only needed if CI is added.
+profile and the explicit region. GitHub Actions uses the repository secrets.
 
 The gateway name and namespace are `summit-ai-demo`; its display name is
 `Summit AI Demo`. The container is `summit-ai-demo-data-plane`. HTTP and
@@ -60,6 +61,9 @@ curl --fail-with-body --silent --show-error --max-time 60 \
   -d '{"model":"demo-nano","messages":[{"role":"user","content":"Reply with a short greeting."}],"max_tokens":32}'
 ```
 
+After deploying the third-model plan, use `"model":"demo-mini"` in the same
+request to select `gpt-4.1-mini`.
+
 ## Configuration and secrets
 
 Edit `ai-gateway.yaml` and repeat plan, review and apply for future changes.
@@ -71,38 +75,35 @@ Keep the certificate pair for subsequent runs.
 
 ## Deploy configuration with GitHub Actions
 
-The workflow `.github/workflows/deploy-ai-gateway.yaml` previews live changes
-on trusted pull requests to `main`. Deployment is a manual dispatch on `main`
-that applies the exact committed `ci/plan.json` reviewed by the operator.
-It checks the plan hash, kongctl version, namespace, additive actions, allowed
-secret sources, organization ID and region before execution. The existing
-repository secrets `KONNECT_PAT` and `OPENAI_API_KEY`, and repository variable
-`KONNECT_REGION=us`, supply its inputs.
+The workflow `.github/workflows/deploy-ai-gateway.yaml` detects changes to
+`ai-gateway.yaml`, public certificates, the plan, and the workflow on trusted
+same-repository pull requests to `main`. It generates an additive plan with
+`kongctl plan --mode apply`, renders that exact file with `kongctl diff --plan`,
+commits it as `ci/plan.json` on the PR branch, and updates a marked section of
+the PR description with the diff, target, commit and SHA-256. Existing PR prose
+is preserved. Fork and Dependabot PRs are skipped because they lack credentials.
 
-For each change, edit the manifest and prepare a new plan:
+For each change, edit the manifest and open or update a PR. Review the generated
+plan commit and the diff in its description. Merging the PR is deployment
+approval: a push to `main` that changes `ci/plan.json` automatically applies the
+committed file using `kongctl apply --plan ci/plan.json --auto-approve`.
+The deployment does not regenerate the plan. Updating configuration on `main`
+without updating the plan does not deploy. A direct push changing the plan also
+triggers deployment; use the repository's PR review process for changes.
 
-```sh
-bash gateway.sh plan
-cp .plans/apply.json ci/plan.json
-shasum -a 256 ci/plan.json
-```
+The existing repository secrets `KONNECT_PAT` and `OPENAI_API_KEY`, plus variable
+`KONNECT_REGION=us`, supply inputs. Planning uses only the Konnect credential;
+provider secrets remain deferred until apply. The planning job has contents and
+pull-request write permissions to commit the plan and edit the description;
+deployment needs only contents read permission. The workflow rejects stale PR
+heads rather than overwriting newer commits, and ignores bot-triggered planning
+runs to avoid recursive plan commits.
 
-Review the diff and hash, then commit the manifest, public certificate,
-`ci/plan.json`, and workflow through your normal source review process.
-Once they are on `main`, explicitly approve deployment by dispatching with
-the reviewed hash:
-
-```sh
-gh workflow run deploy-ai-gateway.yaml --ref main \
-  -f plan_sha256=THE_REVIEWED_SHA256
-gh run list --workflow deploy-ai-gateway.yaml
-```
-
-The workflow must first be published on the default branch to dispatch it.
-This is operator approval; it does not require a second reviewer. Deployment
-does not replan, and PR previews do not replace saved-plan review. Do not rerun
-a completed create plan; generate a fresh plan for subsequent deployments.
-Execution reports are retained as GitHub artifacts for seven days.
+The committed-plan guard checks kongctl version, namespace, additive actions
+and allowed secret sources. Deployment also verifies the organization and region.
+Planning and deployment evidence are retained for seven days. Review the plan
+again after conflicting configuration changes or remote drift; do not rerun a
+completed create plan. A local plan remains available via `bash gateway.sh plan`.
 
 GitHub deploys Konnect configuration. Start the Docker data plane and verify
 inference on this laptop with `bash gateway.sh run` and `bash gateway.sh smoke`.
