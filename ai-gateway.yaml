@@ -56,3 +56,27 @@ ai_gateways:
         policies: []
         capabilities:
           - generate
+      - ref: demo-nano
+        name: demo-nano
+        display_name: Demo Nano
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        config:
+          route:
+            paths:
+              - /v1
+            model:
+              body_param: model
+              values:
+                - demo-nano
+        targets:
+          - name: gpt-4.1-nano
+            provider: openai
+            allow_auth_override: false
+            config:
+              type: openai
+        policies: []
+        capabilities:
+          - generate

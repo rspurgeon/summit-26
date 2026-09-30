@@ -3,6 +3,7 @@
 This project manages a native Konnect AI Gateway with kongctl. Its data plane
 runs locally in Docker, using the Konnect configuration and telemetry channels.
 The `demo-chat` request alias routes to OpenAI `gpt-4o-mini`.
+The `demo-nano` alias routes to `gpt-4.1-nano`, another low-cost model.
 
 Use kongctl 1.19.0, Docker, OpenSSL, curl and jq. The data plane image is
 `kong/kong-ai-gateway:2.0.3`. The configuration follows Kong's
@@ -49,6 +50,15 @@ The endpoint is `http://127.0.0.1:8000/v1/chat/completions`, with the body model
 `demo-chat`. The provider credential is added by the gateway. A nonempty
 assistant completion confirms inference. Inspect `docker logs
 summit-ai-demo-data-plane` if the node fails to connect.
+
+After deploying the plan that adds `demo-nano`, request it through the same endpoint:
+
+```sh
+curl --fail-with-body --silent --show-error --max-time 60 \
+  http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"demo-nano","messages":[{"role":"user","content":"Reply with a short greeting."}],"max_tokens":32}'
+```
 
 ## Configuration and secrets
 
