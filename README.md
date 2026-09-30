@@ -26,9 +26,9 @@ Your trusted, shell-compatible `.env` must contain `OPENAI_API_KEY`, `KONNECT_PA
 and `KONNECT_REGION`. `gateway.sh` loads it without printing credentials and maps
 `KONNECT_PAT` to `KONGCTL_DEFAULT_KONNECT_PAT` for the default profile.
 Every remote command passes the same explicit region and profile.
-Environment variables also work when `.env` is absent, including in GitHub Actions.
-The existing GitHub secrets are sufficient for those inputs; no deployment workflow
-is enabled by this setup.
+Environment variables also work when `.env` is absent. GitHub Actions uses the existing
+`KONNECT_PAT` and `OPENAI_API_KEY` repository secrets and the `KONNECT_REGION`
+repository variable (`us`).
 
 ## Provision and start
 
@@ -93,6 +93,54 @@ ID is committed in YAML so model changes appear in configuration review.
 Only the public certificate `certs/data-plane.crt` belongs in source control.
 Never commit `.env`, private keys, `.plans`, or `.artifacts`; those paths are ignored.
 Logs, endpoints, and the smoke completion stay in `.artifacts`.
+
+## GitHub Actions CI/CD
+
+`.github/workflows/deploy-ai-gateway.yaml` manages the existing gateway in
+namespace `summit-ai-demo`, organization `bc68a981-db50-43b4-a6bc-6a3ab0557d3c`,
+using kongctl 1.20.1 and the repository's existing credentials and controls.
+
+On a same-repository PR to `main` changing the manifest, public certificates,
+workflow, or `ci/plan.json`, the planning job:
+
+1. Generates an additive plan with `--mode apply` and the namespace guard.
+2. Retains the committed plan bytes if only the generation timestamp differs.
+3. Runs `kongctl diff --plan ci/plan.json` against that exact file.
+4. Commits a changed plan to the PR branch without force-pushing.
+5. Replaces only the `<!-- ai-gateway-plan:start -->` / `<!-- ai-gateway-plan:end -->`
+   section in the PR description with the diff, target, plan commit, and SHA-256.
+
+Review the plan commit and marked diff using the repository's normal PR process.
+When a merge updates `ci/plan.json` on `main`, the deployment job validates its
+apply mode, CLI version, namespace, actions, and allowed deferred secret sources,
+checks the live organization, and applies the committed file without regenerating
+it. Execution evidence is retained as a workflow artifact for seven days.
+A config-only push to `main` does not deploy; a direct plan-file push to `main`
+also qualifies under the existing repository controls.
+
+Planning uses only the Konnect credential. Deployment additionally supplies
+`OPENAI_API_KEY` for deferred secret writes. Private keys and `.env` stay local;
+the Docker data plane continues receiving updated configuration from Konnect.
+The workflow neither starts Docker nor sends inference requests from CI.
+
+Run the independent, read-only drift check:
+
+```bash
+gh workflow run deploy-ai-gateway.yaml --ref main -f expect_no_changes=true
+```
+
+The default is `true`: any resource change or secret write fails the check while
+retaining the saved plan and diff as artifacts. Use `-f expect_no_changes=false`
+to inspect proposed changes without asserting convergence. Manual dispatch never
+commits a plan or deploys. This additive check covers declared resources;
+it does not detect extra remote resources omitted from the manifest.
+
+Only planning receives repository write permissions. Fork PRs and bot-triggered
+planning are skipped. Same-repository writers are trusted with the existing shared
+Konnect credential. GitHub may require a writer to approve additional workflow
+runs created by the bot's PR update; use **Approve workflows to run** when shown.
+No additional token, environment gate, or repository policy is introduced.
+See [GitHub's token-trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
 
 ## Stop and remove
 
