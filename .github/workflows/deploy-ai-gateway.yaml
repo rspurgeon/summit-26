@@ -78,12 +78,19 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add ci/plan.json
           if ! git diff --cached --quiet; then
-            git commit -m 'Update AI Gateway deployment plan'
+            git commit -m 'Update AI Gateway deployment plan [skip ci]'
             git push origin "HEAD:refs/heads/$HEAD_BRANCH"
           fi
           export PLAN_COMMIT="$(git rev-parse HEAD)"
           # Read the latest body so edits made during planning are preserved.
-          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > evidence/pr.json
+          # The PR API can briefly lag behind a successful Git push.
+          for attempt in 1 2 3 4 5; do
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" > evidence/pr.json
+            if [[ "$(jq -r '.head.sha' evidence/pr.json)" == "$PLAN_COMMIT" ]]; then
+              break
+            fi
+            sleep 2
+          done
           test "$(jq -r '.head.sha' evidence/pr.json)" = "$PLAN_COMMIT"
           python3 - <<'PY'
           import hashlib, json, os, pathlib, re
