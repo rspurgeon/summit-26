@@ -1,111 +1,15 @@
 {
   "metadata": {
     "version": "1.1",
-    "generated_at": "2026-09-30T23:12:52.965798313Z",
+    "generated_at": "2026-09-30T23:18:40.13789282Z",
     "generator": "kongctl/1.20.1",
     "mode": "apply"
   },
   "changes": [
     {
-      "id": "1:c:ai_gateway:summit-ai",
-      "resource_type": "ai_gateway",
-      "resource_ref": "summit-ai",
-      "action": "CREATE",
-      "fields": {
-        "deployment_type": "hybrid",
-        "description": "Local OpenAI-backed AI Gateway",
-        "display_name": "Summit AI",
-        "name": "summit-ai",
-        "proxy_urls": [
-          {
-            "host": "localhost",
-            "port": 8000,
-            "protocol": "http"
-          }
-        ]
-      },
-      "protection": false,
-      "namespace": "summit-ai"
-    },
-    {
-      "id": "2:c:ai_gateway_data_plane_certificate:summit-ai-data-plane",
-      "resource_type": "ai_gateway_data_plane_certificate",
-      "resource_ref": "summit-ai-data-plane",
-      "action": "CREATE",
-      "fields": {
-        "cert": "-----BEGIN CERTIFICATE-----\nMIIC1DCCAbwCCQDGqZpcCo9NljANBgkqhkiG9w0BAQsFADAsMR0wGwYDVQQDDBRz\ndW1taXQtYWktZGF0YS1wbGFuZTELMAkGA1UEBhMCVVMwHhcNMjYwOTMwMjMwODUw\nWhcNMjcwOTMwMjMwODUwWjAsMR0wGwYDVQQDDBRzdW1taXQtYWktZGF0YS1wbGFu\nZTELMAkGA1UEBhMCVVMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCu\nq3+qd0UA+fvblpgrR7rS2bkbmJbksZjVot2YlD4JadDiuGdvmhlZBxjygZiE4KB6\n3nojL2xNwinlWh1tdtnLVF4iuOxNQnFeOob4JLnfwnRLYyYQrvNUm+E2U0FHef9V\nBt8qnqfqYC7RsNNM5GO9Z6iC+F15uqGzdNGVUtXQOUFiZozL4IvPROrAWFb2DI8L\nckLvJdP+oxxEUck3DPLNQu2otp34xnoyt98XQYMTJgC1bwtEDvATszyfMuXCZCmV\nkPzu96vjHuicv3MVOSUk114rYWhil8+hDZpUiZqGnRbY9rCIpG6+zOphm7KqGEjD\nIzWVDypwfjDGNpPi0B4FAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAKtk0RWzxiK2\nc0uwiN4QALtz6IDRxwqwEzBuQPEEAFdvNtNNBYWuENLetWETD/DHBx9ncFLc+FrA\nbMqSvE7FtgFy9PlUivHLSHQpxMlffMXRboMP/lQYo38Oy+c6W1tXOCdubGqt27St\nD3ek6+20aYOx2k+vmcdbCnn781XlvFonPFpr/mpEYme9WNPRx4fOAIH5g8r35p+D\nL+Bp2ORed8OLtjNmrb1ETiKRD1JwpKf0rTZhwBLvRbja+in2h/uPIaNL4QafYdeC\nuQw3Lhy2NIRHQjEdSFz76U4xbYmpB6FNobw/93+Kosu1G6nseibaDlGOPRcTv5Rl\nrh6ubDsXglM=\n-----END CERTIFICATE-----\n",
-        "description": "Local Docker data plane",
-        "title": "summit-ai-data-plane"
-      },
-      "references": {
-        "ai_gateway_id": {
-          "ref": "summit-ai",
-          "lookup_fields": {
-            "name": "summit-ai"
-          }
-        }
-      },
-      "namespace": "summit-ai",
-      "depends_on": [
-        "1:c:ai_gateway:summit-ai"
-      ]
-    },
-    {
-      "id": "3:c:ai_gateway_model_provider:openai",
-      "resource_type": "ai_gateway_model_provider",
-      "resource_ref": "openai",
-      "action": "CREATE",
-      "fields": {
-        "config": {
-          "auth": {
-            "headers": [
-              {
-                "name": "Authorization"
-              }
-            ],
-            "type": "basic"
-          }
-        },
-        "display_name": "OpenAI",
-        "name": "openai",
-        "type": "openai"
-      },
-      "references": {
-        "ai_gateway_id": {
-          "ref": "summit-ai",
-          "lookup_fields": {
-            "name": "summit-ai"
-          }
-        }
-      },
-      "namespace": "summit-ai",
-      "depends_on": [
-        "1:c:ai_gateway:summit-ai",
-        "2:c:ai_gateway_data_plane_certificate:summit-ai-data-plane"
-      ],
-      "secret_writes": [
-        {
-          "field": "/config/auth/headers/0/value",
-          "expression": {
-            "parts": [
-              {
-                "literal": "Bearer "
-              },
-              {
-                "source": {
-                  "kind": "env",
-                  "reference": "OPENAI_API_KEY"
-                }
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "4:c:ai_gateway_model:demo-chat",
+      "id": "1:c:ai_gateway_model:demo-nano",
       "resource_type": "ai_gateway_model",
-      "resource_ref": "demo-chat",
+      "resource_ref": "demo-nano",
       "action": "CREATE",
       "fields": {
         "capabilities": [
@@ -119,7 +23,7 @@
             "model": {
               "body_param": "model",
               "values": [
-                "demo-chat"
+                "demo-nano"
               ]
             },
             "paths": [
@@ -132,73 +36,55 @@
             "strip_path": true
           }
         },
-        "display_name": "Demo Chat",
+        "display_name": "Demo Nano",
         "enabled": true,
         "formats": [
           {
             "type": "openai"
           }
         ],
-        "name": "demo-chat",
+        "name": "demo-nano",
         "targets": [
           {
             "allow_auth_override": false,
             "config": {
               "type": "openai"
             },
-            "name": "gpt-4.1-mini",
+            "name": "gpt-4.1-nano",
             "provider": "openai",
             "weight": 100
           }
         ],
         "type": "model"
       },
-      "references": {
-        "ai_gateway_id": {
-          "ref": "summit-ai",
-          "lookup_fields": {
-            "name": "summit-ai"
-          }
-        }
+      "parent": {
+        "ref": "summit-ai",
+        "id": "b635b2ec-451b-4209-98df-4b00721f02f8"
       },
-      "namespace": "summit-ai",
-      "depends_on": [
-        "1:c:ai_gateway:summit-ai",
-        "3:c:ai_gateway_model_provider:openai"
-      ]
+      "protecting_parent": {
+        "resource_type": "ai_gateway",
+        "resource_ref": "summit-ai",
+        "resource_id": "b635b2ec-451b-4209-98df-4b00721f02f8",
+        "resource_name": "summit-ai"
+      },
+      "namespace": "summit-ai"
     }
   ],
   "execution_order": [
-    "1:c:ai_gateway:summit-ai",
-    "2:c:ai_gateway_data_plane_certificate:summit-ai-data-plane",
-    "3:c:ai_gateway_model_provider:openai",
-    "4:c:ai_gateway_model:demo-chat"
+    "1:c:ai_gateway_model:demo-nano"
   ],
   "execution_groups": [
     [
-      "1:c:ai_gateway:summit-ai"
-    ],
-    [
-      "2:c:ai_gateway_data_plane_certificate:summit-ai-data-plane"
-    ],
-    [
-      "3:c:ai_gateway_model_provider:openai"
-    ],
-    [
-      "4:c:ai_gateway_model:demo-chat"
+      "1:c:ai_gateway_model:demo-nano"
     ]
   ],
   "summary": {
-    "total_changes": 4,
+    "total_changes": 1,
     "by_action": {
-      "CREATE": 4
+      "CREATE": 1
     },
     "by_resource": {
-      "ai_gateway": 1,
-      "ai_gateway_data_plane_certificate": 1,
-      "ai_gateway_model": 1,
-      "ai_gateway_model_provider": 1
-    },
-    "secret_writes": 1
+      "ai_gateway_model": 1
+    }
   }
 }
