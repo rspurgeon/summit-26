@@ -1,0 +1,15 @@
+{
+  "metadata": {
+    "version": "1.1",
+    "generated_at": "2026-09-30T22:43:53.615967253Z",
+    "generator": "kongctl/1.20.1",
+    "mode": "apply"
+  },
+  "changes": [],
+  "execution_order": null,
+  "summary": {
+    "total_changes": 0,
+    "by_action": {},
+    "by_resource": {}
+  }
+}
