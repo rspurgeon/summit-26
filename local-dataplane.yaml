@@ -1,0 +1,6 @@
+# Applied only on the machine running Docker; CI manages ai-gateway.yaml.
+ai_gateway_data_plane_certificates:
+  - ref: summit-local-certificate
+    ai_gateway: !lookup {name: summit-ai-demo}
+    title: summit-local-certificate
+    cert: !file .local/tls.crt

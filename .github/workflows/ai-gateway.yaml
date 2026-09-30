@@ -1,0 +1,134 @@
+name: AI Gateway CI/CD
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - ai-gateway.yaml
+      - ci/**
+      - scripts/gateway
+      - .github/workflows/ai-gateway.yaml
+      - .github/actions/setup-kongctl/**
+  push:
+    branches: [main]
+    paths: [ci/plan.json]
+  workflow_dispatch:
+    inputs:
+      assert_no_changes:
+        description: Fail if configuration drift is detected
+        type: boolean
+        default: true
+permissions:
+  contents: read
+env:
+  KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_PAT }}
+  KONGCTL_DEFAULT_KONNECT_REGION: ${{ secrets.KONNECT_REGION || vars.KONNECT_REGION }}
+  KONGCTL_NO_TELEMETRY: "true"
+  KONGCTL_DEFAULT_LOG_FILE: /tmp/kongctl.log
+jobs:
+  plan:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: aigw-plan-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: ./.github/actions/setup-kongctl
+      - name: Test CI helpers
+        run: |
+          python3 -m unittest discover -s ci -p 'test_*.py'
+          node --test ci/pr-body.test.cjs
+      - name: Generate additive plan and diff that saved plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          kongctl plan --mode apply -f ai-gateway.yaml \
+            --require-namespace summit-ai-demo --output-file ci/plan.json
+          python3 ci/check-plan.py ci/plan.json
+          kongctl diff --plan ci/plan.json --color never > /tmp/kongctl-diff.txt
+      - name: Commit the reviewed plan to the PR branch
+        id: commit
+        shell: bash
+        env:
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- ci/plan.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'ci: save Kong AI Gateway additive plan'
+          fi
+          # Reject concurrent user updates; never force-push.
+          git push origin "HEAD:refs/heads/$PR_BRANCH"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Update the marked section of the PR description
+        uses: actions/github-script@v7
+        env:
+          PLAN_COMMIT: ${{ steps.commit.outputs.sha }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const { updateBody } = require('./ci/pr-body.cjs');
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo, pull_number: context.issue.number
+            });
+            if (pr.state !== 'open' || pr.head.sha !== process.env.PLAN_COMMIT) {
+              throw new Error('PR changed during planning; rerun against the latest head.');
+            }
+            await github.rest.pulls.update({
+              ...context.repo, pull_number: pr.number,
+              body: updateBody(pr.body || '', fs.readFileSync('/tmp/kongctl-diff.txt', 'utf8'), process.env.PLAN_COMMIT)
+            });
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: summit-ai-demo-konnect
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-kongctl
+      - name: Validate the committed additive plan
+        run: python3 ci/check-plan.py ci/plan.json
+      - name: Apply the committed plan without regenerating it
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: kongctl apply --plan ci/plan.json --auto-approve
+  drift:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: summit-ai-demo-konnect
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-kongctl
+      - name: Read current state and display drift
+        run: |
+          kongctl plan --mode sync -f ai-gateway.yaml \
+            --require-namespace summit-ai-demo --output-file /tmp/drift-plan.json
+          kongctl diff --plan /tmp/drift-plan.json --color never
+      - name: Assert no changes
+        if: ${{ inputs.assert_no_changes }}
+        run: |
+          python3 - <<'PY'
+          import json
+          with open('/tmp/drift-plan.json') as f:
+              plan = json.load(f)
+          if plan['changes']:
+              raise SystemExit(f"Drift detected: {len(plan['changes'])} changes")
+          print('No configuration drift detected.')
+          PY

@@ -1,0 +1,31 @@
+name: summit-ai-demo
+services:
+  gateway:
+    image: ${KONG_AI_GATEWAY_IMAGE:-kong/kong-ai-gateway:2.2.0@sha256:27a81b02af394b07ab0f286ddd20460de0d0fa5c56bf61b1355a14376660de75}
+    container_name: ${AIGW_CONTAINER_NAME:-summit-ai-demo-data-plane}
+    restart: unless-stopped
+    env_file: .local/dataplane.env
+    environment:
+      KONG_ROLE: data_plane
+      KONG_DATABASE: "off"
+      KONG_KONNECT_MODE: "on"
+      KONG_CLUSTER_MTLS: pki
+      KONG_CLUSTER_CERT: /etc/kong/certs/tls.crt
+      KONG_CLUSTER_CERT_KEY: /etc/kong/certs/tls.key
+      KONG_LUA_SSL_TRUSTED_CERTIFICATE: system
+      KONG_ADMIN_LISTEN: "off"
+      KONG_STATUS_LISTEN: 0.0.0.0:8100
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+    ports:
+      - "127.0.0.1:${AIGW_PROXY_PORT:-8000}:8000"
+      - "127.0.0.1:${AIGW_PROXY_TLS_PORT:-8443}:8443"
+    volumes:
+      - ./.local/tls.crt:/etc/kong/certs/tls.crt:ro
+      - ./.local/tls.key:/etc/kong/certs/tls.key:ro
+    healthcheck:
+      test: [CMD, kong, health]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s

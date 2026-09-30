@@ -1,0 +1,52 @@
+_defaults:
+  kongctl:
+    namespace: summit-ai-demo
+
+ai_gateways:
+  - ref: summit-ai-demo
+    name: summit-ai-demo
+    display_name: Summit AI Demo
+    description: Local OpenAI gateway managed declaratively with kongctl
+    deployment_type: hybrid
+    proxy_urls:
+      - host: localhost
+        port: 8000
+        protocol: http
+    model_providers:
+      - ref: openai
+        name: openai
+        display_name: OpenAI
+        type: openai
+        config:
+          auth:
+            type: basic
+            headers:
+              - name: Authorization
+                value: !secret
+                  parts:
+                    - "Bearer "
+                    - !env OPENAI_API_KEY
+    models:
+      - ref: demo-chat
+        name: demo-chat
+        display_name: OpenAI GPT-4o mini
+        type: model
+        enabled: true
+        formats:
+          - type: openai
+        capabilities: [generate]
+        config:
+          route:
+            paths: [/v1]
+            protocols: [http, https]
+            model:
+              body_param: model
+              values: [demo-chat]
+          logging:
+            payloads: false
+          response_streaming: allow
+        targets:
+          - name: gpt-4o-mini
+            provider: !ref openai#name
+            config:
+              type: openai

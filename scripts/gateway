@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+umask 077
+mkdir -p .local
+printf '{}\n' > .local/cli.yaml
+if [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
+fi
+: "${KONNECT_PAT:?Set KONNECT_PAT in .env or the environment}"
+: "${KONNECT_REGION:?Set KONNECT_REGION in .env or the environment}"
+export KONGCTL_DEFAULT_KONNECT_PAT="$KONNECT_PAT"
+export KONGCTL_DEFAULT_KONNECT_REGION="$KONNECT_REGION"
+ctl() { kongctl --config-file "$PWD/.local/cli.yaml" --log-file "$PWD/.local/kongctl.log" --no-telemetry "$@"; }
+case "${1:-help}" in
+  plan)
+    ctl plan --mode apply -f ai-gateway.yaml --require-namespace summit-ai-demo --output-file .local/plan.json
+    ;;
+  apply)
+    : "${OPENAI_API_KEY:?Set OPENAI_API_KEY}"
+    ctl apply --plan .local/plan.json --auto-approve
+    ;;
+  up)
+    command -v jq >/dev/null
+    if [[ ! -s .local/tls.crt && ! -s .local/tls.key ]]; then
+      openssl req -new -x509 -nodes -newkey rsa:2048 -days 365 \
+        -subj /CN=summit-ai-demo -keyout .local/tls.key -out .local/tls.crt 2>.local/openssl.log
+      # The Kong container runs as a non-root user. The private directory remains 0700.
+      chmod 644 .local/tls.crt .local/tls.key
+    fi
+    [[ -s .local/tls.crt && -s .local/tls.key ]] || { echo 'Incomplete TLS identity in .local; restore both files.' >&2; exit 1; }
+    ctl apply -f local-dataplane.yaml --auto-approve
+    ctl get ai-gateway 'Summit AI Demo' --output json > .local/gateway.json
+    config_host=$(jq -er '.endpoints.configuration | sub("^https://"; "") | sub("/$"; "")' .local/gateway.json)
+    telemetry_host=$(jq -er '.endpoints.telemetry | sub("^https://"; "") | sub("/$"; "")' .local/gateway.json)
+    cat > .local/dataplane.env <<EOF
+KONG_CLUSTER_CONTROL_PLANE=${config_host}:443
+KONG_CLUSTER_SERVER_NAME=${config_host}
+KONG_CLUSTER_TELEMETRY_ENDPOINT=${telemetry_host}:443
+KONG_CLUSTER_TELEMETRY_SERVER_NAME=${telemetry_host}
+EOF
+    docker compose up -d --wait --wait-timeout 180
+    ;;
+  test)
+    curl --silent --show-error --fail-with-body --max-time 90 \
+      "http://127.0.0.1:${AIGW_PROXY_PORT:-8000}/v1/chat/completions" \
+      -H 'Content-Type: application/json' \
+      --data '{"model":"demo-chat","messages":[{"role":"user","content":"Reply with: Kong AI Gateway works."}],"max_tokens":32}'
+    printf '\n'
+    ;;
+  status) ctl get ai-gateway nodes --gateway-name summit-ai-demo ;;
+  down) docker compose down ;;
+  kongctl) shift; ctl "$@" ;;
+  *) echo 'Usage: scripts/gateway {plan|apply|up|test|status|down|kongctl ...}' ;;
+esac

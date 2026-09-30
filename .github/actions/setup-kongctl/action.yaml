@@ -1,0 +1,19 @@
+name: Set up kongctl
+description: Install the tested kongctl release with checksum verification
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$RUNNER_TEMP/kongctl"
+        cd "$RUNNER_TEMP/kongctl"
+        release=https://github.com/Kong/kongctl/releases/download/v1.20.1
+        curl -fsSLO "$release/kongctl_linux_amd64.zip"
+        curl -fsSLO "$release/checksums.txt"
+        awk '$2 == "kongctl_linux_amd64.zip"' checksums.txt > selected-checksum.txt
+        test -s selected-checksum.txt
+        sha256sum --check selected-checksum.txt
+        unzip -q kongctl_linux_amd64.zip
+        chmod +x kongctl
+        echo "$RUNNER_TEMP/kongctl" >> "$GITHUB_PATH"
