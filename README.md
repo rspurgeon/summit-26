@@ -5,6 +5,8 @@ The control plane runs in Konnect; the data plane runs in local Docker.
 Configuration lives in `ai-gateway.yaml`, in namespace `summit-ai-demo`.
 The gateway is named `summit-ai-demo`, with display name `Summit AI Demo`.
 The public model alias `demo-chat` routes to OpenAI `gpt-4.1-mini`.
+The additional alias `demo-nano` routes to OpenAI `gpt-4.1-nano` through
+the same `/v1/chat/completions` endpoint and existing provider credential.
 
 Requires kongctl with native `ai_gateways` support (checked with 1.20.1),
 Docker, OpenSSL, curl, and jq. The helper uses `kong/kong-ai-gateway:2.0.3`,
@@ -65,6 +67,16 @@ bash gateway.sh smoke
 
 This calls `http://127.0.0.1:8000/v1/chat/completions` with `demo-chat`,
 saves a local response, and requires a nonempty assistant completion.
+After the model PR merges and its saved plan is applied, test `demo-nano`:
+
+```sh
+curl --fail-with-body --silent --show-error --max-time 60 \
+  http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"demo-nano","messages":[{"role":"user","content":"Reply with a short greeting."}],"max_tokens":32}' \
+  | jq -e '.choices[0].message.content | select(type == "string" and length > 0)'
+```
+
 After successful deployment, rerun `bash gateway.sh plan` to check drift.
 Do not routinely use `--write-secrets`; credential rotation is a deliberate
 change requiring its own reviewed plan.
