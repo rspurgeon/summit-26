@@ -6,8 +6,8 @@ if [[ $# -ne 1 || -z "$1" ]]; then
   exit 1
 fi
 
-jq -n --arg prompt "$1" '{
-  model: "demo-chat",
+jq -n --arg prompt "$1" --arg model "${AIGW_MODEL:-demo-chat}" '{
+  model: $model,
   messages: [{role: "user", content: $prompt}],
   max_tokens: 256
 }' | curl --fail-with-body --silent --show-error --max-time 60 \

@@ -3,7 +3,8 @@
 Native Kong AI Gateway: a local Docker data plane receives declarative configuration
 from a Konnect control plane. Requests stay on loopback at
 `http://127.0.0.1:8000/v1/chat/completions`. The public model alias `demo-chat`
-routes to OpenAI `gpt-4.1-mini`.
+routes to OpenAI `gpt-4.1-mini`. The lower-cost alias `demo-nano` routes to
+OpenAI `gpt-4.1-nano` through the same endpoint and provider.
 
 Configuration lives in `ai-gateway.yaml`, owned by namespace `summit-ai-demo`.
 The gateway is named `summit-ai-demo` and displayed as **Summit AI Demo**.
@@ -72,6 +73,8 @@ Send your own test prompt through the local gateway:
 
 ```bash
 ./ask.sh 'Explain what an AI Gateway does in one sentence.'
+# After the model-addition PR is merged and deployed:
+AIGW_MODEL=demo-nano ./ask.sh 'Explain what an AI Gateway does in one sentence.'
 ```
 
 The script safely encodes the prompt as JSON and prints the assistant's reply.
