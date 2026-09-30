@@ -1,6 +1,13 @@
 name: Plan and deploy AI Gateway
 
 on:
+  workflow_dispatch:
+    inputs:
+      expect_no_changes:
+        description: Fail the drift check if the plan contains changes
+        required: true
+        default: true
+        type: boolean
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -25,6 +32,64 @@ env:
   KONNECT_NAMESPACE: summit-ai-demo
 
 jobs:
+  check-drift:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: Kong/setup-kongctl@659d5c2b0f4db2e25d63797035358a22907421db # v1
+        with:
+          kongctl-version: ${{ env.KONGCTL_VERSION }}
+      - name: Check drift against Konnect
+        env:
+          KONGCTL_DEFAULT_KONNECT_PAT: ${{ secrets.KONNECT_PAT }}
+          EXPECT_NO_CHANGES: ${{ inputs.expect_no_changes }}
+        run: |
+          set -euo pipefail
+          test "$KONNECT_REGION" = us
+          test "$(kongctl version --full | cut -d ' ' -f 1)" = "$KONGCTL_VERSION"
+          actual_org="$(kongctl get organization --profile default --region "$KONNECT_REGION" \
+            -o json --jq '.id' --jq-raw-output)"
+          test "$actual_org" = "$KONNECT_ORG_ID"
+          mkdir -p evidence
+          kongctl plan --mode apply -f ai-gateway.yaml --profile default \
+            --region "$KONNECT_REGION" --require-namespace "$KONNECT_NAMESPACE" \
+            --output-file evidence/plan.json
+          kongctl diff --plan evidence/plan.json --profile default \
+            --region "$KONNECT_REGION" -o text | tee evidence/diff.txt
+          sha256sum evidence/plan.json > evidence/plan-sha256.txt
+          {
+            printf '### AI Gateway drift check\n\n'
+            printf 'Branch: `%s`  \nCommit: `%s`  \n' "$GITHUB_REF_NAME" "$GITHUB_SHA"
+            printf 'Organization: `%s`  \nRegion: `%s`  \nNamespace: `%s`\n\n' \
+              "$actual_org" "$KONNECT_REGION" "$KONNECT_NAMESPACE"
+            printf '```text\n'
+            cat evidence/diff.txt
+            printf '\n```\n'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$EXPECT_NO_CHANGES" == true ]]; then
+            if ! jq -e '.summary.total_changes == 0 and (.changes | length) == 0 and (.summary.secret_writes // 0) == 0' evidence/plan.json >/dev/null; then
+              echo '::error::Expected a no-op, but the saved plan contains changes.'
+              printf '\n**Failed:** expected no changes; inspect the saved plan artifact.\n' >> "$GITHUB_STEP_SUMMARY"
+              exit 1
+            fi
+            printf '\n**Passed:** no changes detected.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Save drift-check evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ai-gateway-drift-${{ github.run_id }}-${{ github.run_attempt }}
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 7
+
   plan:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04

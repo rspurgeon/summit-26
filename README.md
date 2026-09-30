@@ -105,6 +105,24 @@ Planning and deployment evidence are retained for seven days. Review the plan
 again after conflicting configuration changes or remote drift; do not rerun a
 completed create plan. A local plan remains available via `bash gateway.sh plan`.
 
+### Manual drift check
+
+Run **Plan and deploy AI Gateway** from the Actions tab, select `main`, and
+leave **Fail the drift check if the plan contains changes** enabled to prove
+the deployed configuration is a no-op. From the CLI:
+
+```sh
+gh workflow run deploy-ai-gateway.yaml --ref main -f expect_no_changes=true
+```
+
+Manual dispatch runs only the read-only drift job: it generates a fresh plan,
+renders that saved file with `kongctl diff --plan`, publishes the diff in the
+Actions summary, and uploads the plan and evidence for seven days. It neither
+commits `ci/plan.json` nor applies changes. Disable `expect_no_changes` to inspect
+a selected branch's proposed changes without failing when changes are present.
+The check uses additive apply mode, so it checks configured resources without
+proposing deletion of extra remote resources.
+
 GitHub deploys Konnect configuration. Start the Docker data plane and verify
 inference on this laptop with `bash gateway.sh run` and `bash gateway.sh smoke`.
 After a successful deployment, generate a fresh plan to confirm convergence.
