@@ -1,90 +1,379 @@
 {
   "metadata": {
     "version": "1.1",
-    "generated_at": "2026-10-01T17:08:29.685987638Z",
+    "generated_at": "2026-10-01T17:19:17.276003652Z",
     "generator": "kongctl/1.20.1",
     "mode": "apply"
   },
   "changes": [
     {
-      "id": "1:c:ai_gateway_model:demo-chat-nano",
-      "resource_type": "ai_gateway_model",
-      "resource_ref": "demo-chat-nano",
+      "id": "1:c:portal:summit-developer-portal",
+      "resource_type": "portal",
+      "resource_ref": "summit-developer-portal",
       "action": "CREATE",
       "fields": {
-        "capabilities": [
-          "generate"
-        ],
-        "config": {
-          "max_request_body_size": 8388608,
-          "response_streaming": "allow",
-          "route": {
-            "https_redirect_status_code": 426,
-            "model": {
-              "body_param": "model",
-              "values": [
-                "demo-chat-nano"
-              ]
-            },
-            "paths": [
-              "/v1"
-            ],
-            "preserve_host": false,
-            "regex_priority": 0,
-            "request_buffering": true,
-            "response_buffering": true,
-            "strip_path": true
+        "authentication_enabled": false,
+        "auto_approve_applications": false,
+        "auto_approve_developers": false,
+        "default_api_visibility": "public",
+        "default_page_visibility": "public",
+        "description": "Public documentation for Summit AI Gateway chat generation",
+        "display_name": "Summit AI Developer Portal",
+        "name": "summit-ai-developer-portal",
+        "rbac_enabled": false
+      },
+      "protection": false,
+      "namespace": "summit-ai-demo"
+    },
+    {
+      "id": "3:c:portal_page:summit-portal-index",
+      "resource_type": "portal_page",
+      "resource_ref": "summit-portal-index",
+      "action": "CREATE",
+      "fields": {
+        "content": "---\ntitle: Build with Summit AI\ndescription: Two OpenAI models, one chat API. Explore the reference and send your first request.\n---\n\n::page-section\n  ::page-hero\n  ---\n  title-tag: h1\n  text-align: center\n  ---\n  #title\n  Two models. One chat API.\n\n  #description\n  Build chat experiences with Summit AI Gateway. Choose a general-purpose model or a lower-cost option using the same OpenAI-compatible endpoint.\n\n  #actions\n    ::button\n    ---\n    to: /getting-started\n    size: large\n    ---\n    Send your first request\n    ::\n  ::\n::\n\n## Choose your model\n\n| Gateway alias | OpenAI model | Use it for |\n| --- | --- | --- |\n| `demo-chat` | `gpt-4.1-mini` | General text generation and conversation |\n| `demo-chat-nano` | `gpt-4.1-nano` | Simple prompts and lower-cost text generation |\n\nBoth models support text chat generation through `POST /v1/chat/completions`.\nReceive a complete assistant reply or stream the reply as server-sent events.\n\n## Explore the API\n\nThe current **1.1.0** specification documents both model aliases. The **1.0.0**\nspecification preserves the original `demo-chat` contract.\n\n::apis-list\n---\ncta-text: View reference\npage-size: 3\npagination: false\n---\n::\n\n## Run it locally\n\nThe gateway is available at `http://127.0.0.1:8000` on the machine hosting\nthe Docker data plane. Use the terminal examples in [Getting started](/getting-started).\nThe gateway supplies the OpenAI credential for your request; usage is billed\nto its configured provider account.\n",
+        "description": "Two OpenAI models, one chat API. Explore the reference and send your first request.",
+        "slug": "/",
+        "status": "published",
+        "title": "Build with Summit AI",
+        "visibility": "public"
+      },
+      "references": {
+        "portal_id": {
+          "ref": "summit-developer-portal",
+          "id": "[unknown]",
+          "lookup_fields": {
+            "name": "summit-ai-developer-portal"
           }
-        },
-        "display_name": "Demo Chat Nano",
-        "enabled": true,
-        "formats": [
-          {
-            "type": "openai"
-          }
-        ],
-        "name": "demo-chat-nano",
-        "targets": [
-          {
-            "allow_auth_override": false,
-            "config": {
-              "type": "openai"
-            },
-            "name": "gpt-4.1-nano",
-            "provider": "openai",
-            "weight": 100
-          }
-        ],
-        "type": "model"
+        }
       },
       "parent": {
-        "ref": "summit-ai-demo",
-        "id": "3ed72703-bf7b-45ec-926f-529b5b504547"
+        "ref": "summit-developer-portal",
+        "id": ""
       },
       "protecting_parent": {
-        "resource_type": "ai_gateway",
-        "resource_ref": "summit-ai-demo",
-        "resource_id": "3ed72703-bf7b-45ec-926f-529b5b504547",
-        "resource_name": "summit-ai-demo"
+        "resource_type": "portal",
+        "resource_ref": "summit-developer-portal",
+        "resource_name": "summit-ai-developer-portal"
       },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:portal:summit-developer-portal"
+      ]
+    },
+    {
+      "id": "4:c:portal_page:summit-portal-apis",
+      "resource_type": "portal_page",
+      "resource_ref": "summit-portal-apis",
+      "action": "CREATE",
+      "fields": {
+        "content": "---\ntitle: API reference\ndescription: Explore Summit AI Gateway chat completion specifications.\n---\n\n# API reference\n\nSelect the Chat API below to explore its request and response schemas.\nVersion **1.1.0** includes `demo-chat` and `demo-chat-nano`; version **1.0.0**\ndocuments the original mini-only contract. These are specification versions,\nand both models use the same `/v1/chat/completions` path.\n\n::apis-list\n---\ncta-text: View reference\npersist-page-number: true\n---\n::\n",
+        "description": "Explore Summit AI Gateway chat completion specifications.",
+        "slug": "apis",
+        "status": "published",
+        "title": "API reference",
+        "visibility": "public"
+      },
+      "references": {
+        "portal_id": {
+          "ref": "summit-developer-portal",
+          "id": "[unknown]",
+          "lookup_fields": {
+            "name": "summit-ai-developer-portal"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-developer-portal",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "portal",
+        "resource_ref": "summit-developer-portal",
+        "resource_name": "summit-ai-developer-portal"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:portal:summit-developer-portal"
+      ]
+    },
+    {
+      "id": "5:c:portal_page:summit-portal-getting-started",
+      "resource_type": "portal_page",
+      "resource_ref": "summit-portal-getting-started",
+      "action": "CREATE",
+      "fields": {
+        "content": "---\ntitle: Getting started\ndescription: Send chat requests to the local Summit AI Gateway.\n---\n\n# Send your first chat request\n\nRun these commands on the machine hosting the Summit AI Gateway Docker data\nplane. Its HTTP endpoint listens on `127.0.0.1:8000`. The hosted developer\nportal publishes the documentation; requests run from your local terminal.\n\n## Choose a model\n\nSet `model` to `demo-chat` for OpenAI `gpt-4.1-mini`, or `demo-chat-nano` for\nOpenAI `gpt-4.1-nano`. The gateway supplies the provider credential. This local\ndeployment has no caller authentication, so clients only send a JSON body.\n\n```bash\ncurl --fail-with-body --silent --show-error --max-time 60 \\\n  http://127.0.0.1:8000/v1/chat/completions \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"model\":\"demo-chat-nano\",\"messages\":[{\"role\":\"user\",\"content\":\"Give me a short greeting.\"}],\"max_tokens\":32}'\n```\n\nRead the reply from `choices[0].message.content`. The returned `model` may be\nthe upstream OpenAI model identifier rather than the gateway alias.\n\nFrom the Summit repository, you can also use the terminal client:\n\n```bash\n./chat.sh --model demo-chat-nano \"Give me a short greeting.\"\n./chat.sh --model demo-chat \"Explain AI gateways in two sentences.\"\n```\n\n## Stream a reply\n\nSet `stream` to `true` and use `--no-buffer` to receive server-sent events:\n\n```bash\ncurl --fail-with-body --silent --show-error --no-buffer --max-time 60 \\\n  http://127.0.0.1:8000/v1/chat/completions \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"model\":\"demo-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"Give me a short greeting.\"}],\"max_tokens\":32,\"stream\":true}'\n```\n\nEach JSON data event can contribute text in `choices[0].delta.content`.\nThe final event is `data: [DONE]`.\n\n## Understand errors\n\nAn unknown model alias can return `404` because no gateway model route matches.\nAn invalid request can return `400`; provider authentication failures can\nreturn `401`; quota or rate limits can return `429`. Inspect the response\nbody for details before retrying. Provider errors can appear under `error`,\nwhile gateway errors can use `message`.\n\nBrowse the [API reference](/apis) for the supported text request parameters,\ncompletion response, and streaming event schemas.\n",
+        "description": "Send chat requests to the local Summit AI Gateway.",
+        "slug": "getting-started",
+        "status": "published",
+        "title": "Getting started",
+        "visibility": "public"
+      },
+      "references": {
+        "portal_id": {
+          "ref": "summit-developer-portal",
+          "id": "[unknown]",
+          "lookup_fields": {
+            "name": "summit-ai-developer-portal"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-developer-portal",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "portal",
+        "resource_ref": "summit-developer-portal",
+        "resource_name": "summit-ai-developer-portal"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:portal:summit-developer-portal"
+      ]
+    },
+    {
+      "id": "6:u:portal_customization:summit-portal-customization",
+      "resource_type": "portal_customization",
+      "resource_ref": "summit-portal-customization",
+      "action": "UPDATE",
+      "fields": {
+        "menu": {
+          "main": [
+            {
+              "external": false,
+              "path": "/",
+              "title": "Home",
+              "visibility": "public"
+            },
+            {
+              "external": false,
+              "path": "/apis",
+              "title": "API reference",
+              "visibility": "public"
+            },
+            {
+              "external": false,
+              "path": "/getting-started",
+              "title": "Getting started",
+              "visibility": "public"
+            }
+          ]
+        },
+        "spec_renderer": {
+          "allow_custom_server_urls": true,
+          "hide_deprecated": false,
+          "hide_internal": false,
+          "infinite_scroll": true,
+          "show_schemas": true,
+          "try_it_insomnia": true,
+          "try_it_ui": false
+        }
+      },
+      "references": {
+        "portal_id": {
+          "ref": "summit-developer-portal",
+          "id": "[unknown]",
+          "lookup_fields": {
+            "name": "summit-ai-developer-portal"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-developer-portal",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "portal",
+        "resource_ref": "summit-developer-portal",
+        "resource_name": "summit-ai-developer-portal"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:portal:summit-developer-portal"
+      ]
+    },
+    {
+      "id": "2:c:api:summit-gateway-chat-api",
+      "resource_type": "api",
+      "resource_ref": "summit-gateway-chat-api",
+      "action": "CREATE",
+      "fields": {
+        "description": "OpenAI-compatible text chat generation through the Summit AI Gateway. Select demo-chat (gpt-4.1-mini) or demo-chat-nano (gpt-4.1-nano) in the request body. The gateway supplies the provider credential. The Docker data plane is reachable only on its local host.",
+        "name": "Summit AI Gateway Chat API",
+        "slug": "summit-ai-gateway-chat",
+        "version": "1.1.0"
+      },
+      "protection": false,
       "namespace": "summit-ai-demo"
+    },
+    {
+      "id": "7:c:api_version:summit-gateway-chat-v1",
+      "resource_type": "api_version",
+      "resource_ref": "summit-gateway-chat-v1",
+      "action": "CREATE",
+      "fields": {
+        "spec": {
+          "content": "{\"components\":{\"schemas\":{\"ChatCompletion\":{\"properties\":{\"choices\":{\"items\":{\"properties\":{\"finish_reason\":{\"nullable\":true,\"type\":\"string\"},\"index\":{\"type\":\"integer\"},\"message\":{\"properties\":{\"content\":{\"nullable\":true,\"type\":\"string\"},\"role\":{\"enum\":[\"assistant\"],\"type\":\"string\"}},\"required\":[\"role\",\"content\"],\"type\":\"object\"}},\"required\":[\"index\",\"message\",\"finish_reason\"],\"type\":\"object\"},\"type\":\"array\"},\"created\":{\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"type\":\"string\"},\"model\":{\"description\":\"Upstream model identifier; may differ from the requested gateway alias.\",\"type\":\"string\"},\"object\":{\"enum\":[\"chat.completion\"],\"type\":\"string\"},\"usage\":{\"properties\":{\"completion_tokens\":{\"minimum\":0,\"type\":\"integer\"},\"prompt_tokens\":{\"minimum\":0,\"type\":\"integer\"},\"total_tokens\":{\"minimum\":0,\"type\":\"integer\"}},\"type\":\"object\"}},\"required\":[\"id\",\"object\",\"created\",\"model\",\"choices\"],\"type\":\"object\"},\"ChatCompletionChunk\":{\"properties\":{\"choices\":{\"items\":{\"properties\":{\"delta\":{\"properties\":{\"content\":{\"nullable\":true,\"type\":\"string\"},\"role\":{\"type\":\"string\"}},\"type\":\"object\"},\"finish_reason\":{\"nullable\":true,\"type\":\"string\"},\"index\":{\"type\":\"integer\"}},\"type\":\"object\"},\"type\":\"array\"},\"created\":{\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"type\":\"string\"},\"model\":{\"type\":\"string\"},\"object\":{\"enum\":[\"chat.completion.chunk\"],\"type\":\"string\"}},\"required\":[\"id\",\"object\",\"created\",\"model\",\"choices\"],\"type\":\"object\"},\"ChatCompletionRequest\":{\"properties\":{\"max_tokens\":{\"description\":\"Maximum number of generated tokens.\",\"minimum\":1,\"type\":\"integer\"},\"messages\":{\"items\":{\"$ref\":\"#/components/schemas/ChatMessage\"},\"minItems\":1,\"type\":\"array\"},\"model\":{\"description\":\"Gateway alias: demo-chat routes to gpt-4.1-mini.\",\"enum\":[\"demo-chat\"],\"type\":\"string\"},\"stream\":{\"default\":false,\"description\":\"Receive server-sent events when true.\",\"type\":\"boolean\"},\"temperature\":{\"maximum\":2,\"minimum\":0,\"type\":\"number\"},\"top_p\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"model\",\"messages\"],\"type\":\"object\"},\"ChatMessage\":{\"properties\":{\"content\":{\"description\":\"Text content of the message.\",\"type\":\"string\"},\"role\":{\"enum\":[\"system\",\"user\",\"assistant\"],\"type\":\"string\"}},\"required\":[\"role\",\"content\"],\"type\":\"object\"},\"Error\":{\"description\":\"Gateway errors may use message; provider errors may use error.\",\"properties\":{\"error\":{\"properties\":{\"code\":{\"nullable\":true,\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"param\":{\"nullable\":true,\"type\":\"string\"},\"type\":{\"type\":\"string\"}},\"type\":\"object\"},\"message\":{\"type\":\"string\"}},\"type\":\"object\"}}},\"info\":{\"description\":\"Original text chat generation contract through the Summit AI Gateway using demo-chat (gpt-4.1-mini). The gateway supplies the provider credential. The Docker data plane is reachable only on its local host.\",\"title\":\"Summit AI Gateway Chat API\",\"version\":\"1.0.0\"},\"openapi\":\"3.0.3\",\"paths\":{\"/v1/chat/completions\":{\"post\":{\"description\":\"Send text messages using a gateway model alias. This specification covers text chat generation and streaming, a subset of the upstream OpenAI API. It does not declare embeddings, image generation, or other unconfigured endpoints.\",\"operationId\":\"createChatCompletion\",\"requestBody\":{\"content\":{\"application/json\":{\"examples\":{\"mini\":{\"summary\":\"GPT-4.1 mini\",\"value\":{\"max_tokens\":32,\"messages\":[{\"content\":\"Give me a short greeting.\",\"role\":\"user\"}],\"model\":\"demo-chat\"}}},\"schema\":{\"$ref\":\"#/components/schemas/ChatCompletionRequest\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"example\":{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"Hello!\",\"role\":\"assistant\"}}],\"created\":0,\"id\":\"chatcmpl-example\",\"model\":\"gpt-4.1-mini\",\"object\":\"chat.completion\"},\"schema\":{\"$ref\":\"#/components/schemas/ChatCompletion\"}},\"text/event-stream\":{\"example\":\"data: {\\\"id\\\": \\\"chatcmpl-example\\\", \\\"object\\\": \\\"chat.completion.chunk\\\", \\\"created\\\": 0, \\\"model\\\": \\\"gpt-4.1-mini\\\", \\\"choices\\\": [{\\\"index\\\": 0, \\\"delta\\\": {\\\"content\\\": \\\"Hello!\\\"}, \\\"finish_reason\\\": null}]}\\n\\ndata: [DONE]\\n\\n\",\"schema\":{\"description\":\"SSE frames containing ChatCompletionChunk JSON, followed by the [DONE] sentinel.\",\"type\":\"string\"}}},\"description\":\"A complete reply, or SSE data events when stream=true. Decode each JSON data event as ChatCompletionChunk. The stream ends with data: [DONE].\"},\"400\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Invalid request.\"},\"401\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Provider authentication failure.\"},\"404\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"No gateway model route matched the requested alias.\"},\"429\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Provider quota or rate limit reached.\"},\"500\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Gateway or provider error.\"},\"502\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Upstream provider unavailable.\"}},\"summary\":\"Generate a chat completion\",\"tags\":[\"Chat\"]}}},\"security\":[],\"servers\":[{\"description\":\"Local Docker data plane on the machine running the gateway.\",\"url\":\"http://127.0.0.1:8000\"}],\"tags\":[{\"description\":\"Text chat generation using configured gateway model aliases.\",\"name\":\"Chat\"}]}"
+        },
+        "version": "1.0.0"
+      },
+      "references": {
+        "api_id": {
+          "ref": "summit-gateway-chat-api",
+          "lookup_fields": {
+            "name": "Summit AI Gateway Chat API"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-gateway-chat-api",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "api",
+        "resource_ref": "summit-gateway-chat-api",
+        "resource_name": "Summit AI Gateway Chat API"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "2:c:api:summit-gateway-chat-api"
+      ]
+    },
+    {
+      "id": "8:c:api_version:summit-gateway-chat-v1-1",
+      "resource_type": "api_version",
+      "resource_ref": "summit-gateway-chat-v1-1",
+      "action": "CREATE",
+      "fields": {
+        "spec": {
+          "content": "{\"components\":{\"schemas\":{\"ChatCompletion\":{\"properties\":{\"choices\":{\"items\":{\"properties\":{\"finish_reason\":{\"nullable\":true,\"type\":\"string\"},\"index\":{\"type\":\"integer\"},\"message\":{\"properties\":{\"content\":{\"nullable\":true,\"type\":\"string\"},\"role\":{\"enum\":[\"assistant\"],\"type\":\"string\"}},\"required\":[\"role\",\"content\"],\"type\":\"object\"}},\"required\":[\"index\",\"message\",\"finish_reason\"],\"type\":\"object\"},\"type\":\"array\"},\"created\":{\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"type\":\"string\"},\"model\":{\"description\":\"Upstream model identifier; may differ from the requested gateway alias.\",\"type\":\"string\"},\"object\":{\"enum\":[\"chat.completion\"],\"type\":\"string\"},\"usage\":{\"properties\":{\"completion_tokens\":{\"minimum\":0,\"type\":\"integer\"},\"prompt_tokens\":{\"minimum\":0,\"type\":\"integer\"},\"total_tokens\":{\"minimum\":0,\"type\":\"integer\"}},\"type\":\"object\"}},\"required\":[\"id\",\"object\",\"created\",\"model\",\"choices\"],\"type\":\"object\"},\"ChatCompletionChunk\":{\"properties\":{\"choices\":{\"items\":{\"properties\":{\"delta\":{\"properties\":{\"content\":{\"nullable\":true,\"type\":\"string\"},\"role\":{\"type\":\"string\"}},\"type\":\"object\"},\"finish_reason\":{\"nullable\":true,\"type\":\"string\"},\"index\":{\"type\":\"integer\"}},\"type\":\"object\"},\"type\":\"array\"},\"created\":{\"format\":\"int64\",\"type\":\"integer\"},\"id\":{\"type\":\"string\"},\"model\":{\"type\":\"string\"},\"object\":{\"enum\":[\"chat.completion.chunk\"],\"type\":\"string\"}},\"required\":[\"id\",\"object\",\"created\",\"model\",\"choices\"],\"type\":\"object\"},\"ChatCompletionRequest\":{\"properties\":{\"max_tokens\":{\"description\":\"Maximum number of generated tokens.\",\"minimum\":1,\"type\":\"integer\"},\"messages\":{\"items\":{\"$ref\":\"#/components/schemas/ChatMessage\"},\"minItems\":1,\"type\":\"array\"},\"model\":{\"description\":\"Gateway alias: demo-chat routes to gpt-4.1-mini; demo-chat-nano routes to gpt-4.1-nano.\",\"enum\":[\"demo-chat\",\"demo-chat-nano\"],\"type\":\"string\"},\"stream\":{\"default\":false,\"description\":\"Receive server-sent events when true.\",\"type\":\"boolean\"},\"temperature\":{\"maximum\":2,\"minimum\":0,\"type\":\"number\"},\"top_p\":{\"maximum\":1,\"minimum\":0,\"type\":\"number\"}},\"required\":[\"model\",\"messages\"],\"type\":\"object\"},\"ChatMessage\":{\"properties\":{\"content\":{\"description\":\"Text content of the message.\",\"type\":\"string\"},\"role\":{\"enum\":[\"system\",\"user\",\"assistant\"],\"type\":\"string\"}},\"required\":[\"role\",\"content\"],\"type\":\"object\"},\"Error\":{\"description\":\"Gateway errors may use message; provider errors may use error.\",\"properties\":{\"error\":{\"properties\":{\"code\":{\"nullable\":true,\"type\":\"string\"},\"message\":{\"type\":\"string\"},\"param\":{\"nullable\":true,\"type\":\"string\"},\"type\":{\"type\":\"string\"}},\"type\":\"object\"},\"message\":{\"type\":\"string\"}},\"type\":\"object\"}}},\"info\":{\"description\":\"OpenAI-compatible text chat generation through the Summit AI Gateway. Select demo-chat (gpt-4.1-mini) or demo-chat-nano (gpt-4.1-nano) in the request body. The gateway supplies the provider credential. The Docker data plane is reachable only on its local host.\",\"title\":\"Summit AI Gateway Chat API\",\"version\":\"1.1.0\"},\"openapi\":\"3.0.3\",\"paths\":{\"/v1/chat/completions\":{\"post\":{\"description\":\"Send text messages using a gateway model alias. This specification covers text chat generation and streaming, a subset of the upstream OpenAI API. It does not declare embeddings, image generation, or other unconfigured endpoints.\",\"operationId\":\"createChatCompletion\",\"requestBody\":{\"content\":{\"application/json\":{\"examples\":{\"mini\":{\"summary\":\"GPT-4.1 mini\",\"value\":{\"max_tokens\":32,\"messages\":[{\"content\":\"Give me a short greeting.\",\"role\":\"user\"}],\"model\":\"demo-chat\"}},\"nano\":{\"summary\":\"GPT-4.1 nano\",\"value\":{\"max_tokens\":32,\"messages\":[{\"content\":\"Give me a short greeting.\",\"role\":\"user\"}],\"model\":\"demo-chat-nano\"}}},\"schema\":{\"$ref\":\"#/components/schemas/ChatCompletionRequest\"}}},\"required\":true},\"responses\":{\"200\":{\"content\":{\"application/json\":{\"example\":{\"choices\":[{\"finish_reason\":\"stop\",\"index\":0,\"message\":{\"content\":\"Hello!\",\"role\":\"assistant\"}}],\"created\":0,\"id\":\"chatcmpl-example\",\"model\":\"gpt-4.1-mini\",\"object\":\"chat.completion\"},\"schema\":{\"$ref\":\"#/components/schemas/ChatCompletion\"}},\"text/event-stream\":{\"example\":\"data: {\\\"id\\\": \\\"chatcmpl-example\\\", \\\"object\\\": \\\"chat.completion.chunk\\\", \\\"created\\\": 0, \\\"model\\\": \\\"gpt-4.1-mini\\\", \\\"choices\\\": [{\\\"index\\\": 0, \\\"delta\\\": {\\\"content\\\": \\\"Hello!\\\"}, \\\"finish_reason\\\": null}]}\\n\\ndata: [DONE]\\n\\n\",\"schema\":{\"description\":\"SSE frames containing ChatCompletionChunk JSON, followed by the [DONE] sentinel.\",\"type\":\"string\"}}},\"description\":\"A complete reply, or SSE data events when stream=true. Decode each JSON data event as ChatCompletionChunk. The stream ends with data: [DONE].\"},\"400\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Invalid request.\"},\"401\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Provider authentication failure.\"},\"404\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"No gateway model route matched the requested alias.\"},\"429\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Provider quota or rate limit reached.\"},\"500\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Gateway or provider error.\"},\"502\":{\"content\":{\"application/json\":{\"schema\":{\"$ref\":\"#/components/schemas/Error\"}}},\"description\":\"Upstream provider unavailable.\"}},\"summary\":\"Generate a chat completion\",\"tags\":[\"Chat\"]}}},\"security\":[],\"servers\":[{\"description\":\"Local Docker data plane on the machine running the gateway.\",\"url\":\"http://127.0.0.1:8000\"}],\"tags\":[{\"description\":\"Text chat generation using configured gateway model aliases.\",\"name\":\"Chat\"}]}"
+        },
+        "version": "1.1.0"
+      },
+      "references": {
+        "api_id": {
+          "ref": "summit-gateway-chat-api",
+          "lookup_fields": {
+            "name": "Summit AI Gateway Chat API"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-gateway-chat-api",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "api",
+        "resource_ref": "summit-gateway-chat-api",
+        "resource_name": "Summit AI Gateway Chat API"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "2:c:api:summit-gateway-chat-api"
+      ]
+    },
+    {
+      "id": "9:c:api_publication:summit-gateway-chat-publication",
+      "resource_type": "api_publication",
+      "resource_ref": "summit-gateway-chat-publication",
+      "action": "CREATE",
+      "fields": {
+        "visibility": "public"
+      },
+      "references": {
+        "api_id": {
+          "ref": "summit-gateway-chat-api",
+          "lookup_fields": {
+            "name": "Summit AI Gateway Chat API"
+          }
+        },
+        "portal_id": {
+          "ref": "__REF__:summit-developer-portal#id",
+          "id": "[unknown]",
+          "lookup_fields": {
+            "name": "summit-ai-developer-portal"
+          }
+        }
+      },
+      "parent": {
+        "ref": "summit-gateway-chat-api",
+        "id": ""
+      },
+      "protecting_parent": {
+        "resource_type": "api",
+        "resource_ref": "summit-gateway-chat-api",
+        "resource_name": "Summit AI Gateway Chat API"
+      },
+      "namespace": "summit-ai-demo",
+      "depends_on": [
+        "1:c:portal:summit-developer-portal",
+        "2:c:api:summit-gateway-chat-api"
+      ]
     }
   ],
   "execution_order": [
-    "1:c:ai_gateway_model:demo-chat-nano"
+    "1:c:portal:summit-developer-portal",
+    "2:c:api:summit-gateway-chat-api",
+    "3:c:portal_page:summit-portal-index",
+    "4:c:portal_page:summit-portal-apis",
+    "5:c:portal_page:summit-portal-getting-started",
+    "6:u:portal_customization:summit-portal-customization",
+    "7:c:api_version:summit-gateway-chat-v1",
+    "8:c:api_version:summit-gateway-chat-v1-1",
+    "9:c:api_publication:summit-gateway-chat-publication"
   ],
   "execution_groups": [
     [
-      "1:c:ai_gateway_model:demo-chat-nano"
+      "1:c:portal:summit-developer-portal",
+      "2:c:api:summit-gateway-chat-api"
+    ],
+    [
+      "3:c:portal_page:summit-portal-index",
+      "4:c:portal_page:summit-portal-apis",
+      "5:c:portal_page:summit-portal-getting-started",
+      "6:u:portal_customization:summit-portal-customization",
+      "7:c:api_version:summit-gateway-chat-v1",
+      "8:c:api_version:summit-gateway-chat-v1-1",
+      "9:c:api_publication:summit-gateway-chat-publication"
     ]
   ],
   "summary": {
-    "total_changes": 1,
+    "total_changes": 9,
     "by_action": {
-      "CREATE": 1
+      "CREATE": 8,
+      "UPDATE": 1
     },
     "by_resource": {
-      "ai_gateway_model": 1
+      "api": 1,
+      "api_publication": 1,
+      "api_version": 2,
+      "portal": 1,
+      "portal_customization": 1,
+      "portal_page": 3
     }
-  }
+  },
+  "warnings": [
+    {
+      "change_id": "3:c:portal_page:summit-portal-index",
+      "message": "Reference portal_id=summit-developer-portal will be resolved during execution"
+    },
+    {
+      "change_id": "4:c:portal_page:summit-portal-apis",
+      "message": "Reference portal_id=summit-developer-portal will be resolved during execution"
+    },
+    {
+      "change_id": "5:c:portal_page:summit-portal-getting-started",
+      "message": "Reference portal_id=summit-developer-portal will be resolved during execution"
+    },
+    {
+      "change_id": "6:u:portal_customization:summit-portal-customization",
+      "message": "Reference portal_id=summit-developer-portal will be resolved during execution"
+    },
+    {
+      "change_id": "9:c:api_publication:summit-gateway-chat-publication",
+      "message": "Reference portal_id=__REF__:summit-developer-portal#id will be resolved during execution"
+    }
+  ]
 }
