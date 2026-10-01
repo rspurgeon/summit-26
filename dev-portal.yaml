@@ -11,6 +11,14 @@ portals:
     rbac_enabled: false
     default_api_visibility: public
     default_page_visibility: public
+    pages:
+      - ref: summit-portal-home
+        slug: home
+        title: Summit AI Developer Portal
+        description: Explore our AI APIs, choose a model, and send your first request.
+        visibility: public
+        status: published
+        content: !file ./portal/home.md
     customization:
       ref: summit-portal-customization
       spec_renderer:

@@ -181,6 +181,10 @@ and RBAC are disabled; API and page defaults are public. It publishes the
 **Summit AI Chat Completions** API with public visibility and a published
 getting-started document.
 
+The public `home` page serves the portal root (`/`). Its content lives in
+`portal/home.md` and links to the API catalog, Chat Completions reference, and
+getting-started guide. Homepage edits use the same PR plan and deployment flow.
+
 The API specification versions are stored outside the resource manifests:
 
 | Specification | Model aliases | Meaning |
@@ -218,7 +222,7 @@ merge and a successful deployment, the new portal and API remain staged.
 After deployment, discover the actual portal URL rather than constructing it:
 
 ```bash
-bash kongctl.sh get portal 'Summit AI Developer Portal' -o json
+bash kongctl.sh get portal summit-developer-portal -o json
 ```
 
 Stopping the local Docker gateway does not remove the portal or catalog API.
