@@ -1,0 +1,403 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Summit AI Gateway Chat API",
+    "version": "1.1.0",
+    "description": "OpenAI-compatible text chat generation through the Summit AI Gateway. Select demo-chat (gpt-4.1-mini) or demo-chat-nano (gpt-4.1-nano) in the request body. The gateway supplies the provider credential. The Docker data plane is reachable only on its local host."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000",
+      "description": "Local Docker data plane on the machine running the gateway."
+    }
+  ],
+  "security": [],
+  "tags": [
+    {
+      "name": "Chat",
+      "description": "Text chat generation using configured gateway model aliases."
+    }
+  ],
+  "paths": {
+    "/v1/chat/completions": {
+      "post": {
+        "operationId": "createChatCompletion",
+        "summary": "Generate a chat completion",
+        "description": "Send text messages using a gateway model alias. This specification covers text chat generation and streaming, a subset of the upstream OpenAI API. It does not declare embeddings, image generation, or other unconfigured endpoints.",
+        "tags": [
+          "Chat"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatCompletionRequest"
+              },
+              "examples": {
+                "mini": {
+                  "summary": "GPT-4.1 mini",
+                  "value": {
+                    "model": "demo-chat",
+                    "messages": [
+                      {
+                        "role": "user",
+                        "content": "Give me a short greeting."
+                      }
+                    ],
+                    "max_tokens": 32
+                  }
+                },
+                "nano": {
+                  "summary": "GPT-4.1 nano",
+                  "value": {
+                    "model": "demo-chat-nano",
+                    "messages": [
+                      {
+                        "role": "user",
+                        "content": "Give me a short greeting."
+                      }
+                    ],
+                    "max_tokens": 32
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A complete reply, or SSE data events when stream=true. Decode each JSON data event as ChatCompletionChunk. The stream ends with data: [DONE].",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletion"
+                },
+                "example": {
+                  "id": "chatcmpl-example",
+                  "object": "chat.completion",
+                  "created": 0,
+                  "model": "gpt-4.1-mini",
+                  "choices": [
+                    {
+                      "index": 0,
+                      "message": {
+                        "role": "assistant",
+                        "content": "Hello!"
+                      },
+                      "finish_reason": "stop"
+                    }
+                  ]
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE frames containing ChatCompletionChunk JSON, followed by the [DONE] sentinel."
+                },
+                "example": "data: {\"id\": \"chatcmpl-example\", \"object\": \"chat.completion.chunk\", \"created\": 0, \"model\": \"gpt-4.1-mini\", \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"Hello!\"}, \"finish_reason\": null}]}\n\ndata: [DONE]\n\n"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Provider authentication failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No gateway model route matched the requested alias.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Provider quota or rate limit reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Gateway or provider error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream provider unavailable.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ChatMessage": {
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "description": "Text content of the message."
+          }
+        }
+      },
+      "ChatCompletionRequest": {
+        "type": "object",
+        "required": [
+          "model",
+          "messages"
+        ],
+        "properties": {
+          "model": {
+            "type": "string",
+            "enum": [
+              "demo-chat",
+              "demo-chat-nano"
+            ],
+            "description": "Gateway alias: demo-chat routes to gpt-4.1-mini; demo-chat-nano routes to gpt-4.1-nano."
+          },
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/ChatMessage"
+            }
+          },
+          "max_tokens": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Maximum number of generated tokens."
+          },
+          "stream": {
+            "type": "boolean",
+            "default": false,
+            "description": "Receive server-sent events when true."
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "top_p": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "ChatCompletion": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "chat.completion"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "model": {
+            "type": "string",
+            "description": "Upstream model identifier; may differ from the requested gateway alias."
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "index",
+                "message",
+                "finish_reason"
+              ],
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "message": {
+                  "type": "object",
+                  "required": [
+                    "role",
+                    "content"
+                  ],
+                  "properties": {
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "assistant"
+                      ]
+                    },
+                    "content": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "prompt_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completion_tokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_tokens": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ChatCompletionChunk": {
+        "type": "object",
+        "required": [
+          "id",
+          "object",
+          "created",
+          "model",
+          "choices"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "object": {
+            "type": "string",
+            "enum": [
+              "chat.completion.chunk"
+            ]
+          },
+          "created": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "model": {
+            "type": "string"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "index": {
+                  "type": "integer"
+                },
+                "delta": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                },
+                "finish_reason": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "description": "Gateway errors may use message; provider errors may use error.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "nullable": true
+              },
+              "param": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

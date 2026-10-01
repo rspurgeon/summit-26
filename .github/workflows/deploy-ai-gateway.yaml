@@ -13,6 +13,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - ai-gateway.yaml
+      - portal.yaml
+      - portal/pages/**
+      - specs/**
       - certs/**.crt
       - ci/plan.json
       - .github/workflows/deploy-ai-gateway.yaml
@@ -58,7 +61,7 @@ jobs:
             -o json --jq '.id' --jq-raw-output)"
           test "$actual_org" = "$KONNECT_ORG_ID"
           mkdir -p evidence
-          kongctl plan --mode apply -f ai-gateway.yaml --profile default \
+          kongctl plan --mode apply -f ai-gateway.yaml -f portal.yaml --profile default \
             --region "$KONNECT_REGION" --require-namespace "$KONNECT_NAMESPACE" \
             --output-file evidence/plan.json
           kongctl diff --plan evidence/plan.json --profile default \
@@ -127,7 +130,7 @@ jobs:
             -o json --jq '.id' --jq-raw-output)"
           test "$actual_org" = "$KONNECT_ORG_ID"
           mkdir -p ci evidence
-          kongctl plan --mode apply -f ai-gateway.yaml --profile default \
+          kongctl plan --mode apply -f ai-gateway.yaml -f portal.yaml --profile default \
             --region "$KONNECT_REGION" --require-namespace "$KONNECT_NAMESPACE" \
             --output-file ci/plan.json
           # Keep the committed bytes when only the generation timestamp differs.

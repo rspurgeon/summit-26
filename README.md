@@ -6,7 +6,8 @@ The client model alias `demo-chat` routes to OpenAI `gpt-4.1-mini`.
 The lower-cost alias `demo-chat-nano` routes to OpenAI `gpt-4.1-nano`
 through the same endpoint and provider.
 
-The manifest is `ai-gateway.yaml`, owned by namespace `summit-ai-demo`.
+The manifests are `ai-gateway.yaml` and `portal.yaml`, owned by namespace
+`summit-ai-demo`.
 The gateway name is `summit-ai-demo`, with display name `Summit AI Demo`.
 Tooling checked during setup: kongctl 1.20.1, Docker, OpenSSL, curl and jq.
 The runtime image is `kong/kong-ai-gateway:2.0.3`, pinned in the helper and
@@ -84,7 +85,7 @@ Use `AIGW_DATA_PLANE_KEY` for an absolute path to an existing private key.
 
 ## Manage changes and cleanup
 
-Edit the manifest and generate a new plan for review. For a running gateway,
+Edit either manifest and generate a new plan for review. For a running gateway,
 use `bash gateway.sh drift` to plan without the new-container preflight.
 Review `.plans/follow-up.json`; do not execute an older plan after changing
 inputs. `bash gateway.sh plan` is intended for initial setup, when the
@@ -97,8 +98,9 @@ bash gateway.sh drift
 bash gateway.sh stop
 ```
 
-Stopping removes only this project's local container. To remove its Konnect
-resources, first generate and review the scoped deletion plan:
+Stopping removes only this project's local container. To remove the Konnect
+resources declared in both manifests (gateway, portal, and API documentation),
+first generate and review the scoped deletion plan:
 
 ```sh
 bash gateway.sh cleanup-plan
@@ -129,10 +131,11 @@ the existing `summit-ai-demo` namespace in region `us`, organization
 `KONNECT_REGION=us`. The public certificate must be committed; the private
 key remains on the local data plane host.
 
-On a same-repository PR to `main` changing the manifest, public certificate,
-plan, or workflow, the planning job:
+On a same-repository PR to `main` changing either manifest, portal content,
+OpenAPI specifications, public certificate, plan, or workflow, the planning job:
 
-1. Generates an apply-mode plan as `ci/plan.json` using only `KONNECT_PAT`.
+1. Generates one apply-mode plan from `ai-gateway.yaml` and `portal.yaml` as
+   `ci/plan.json` using only `KONNECT_PAT`.
 2. Runs `kongctl diff --plan ci/plan.json` against those exact saved bytes.
 3. Commits the plan on the PR branch and replaces the marked deployment
    section in the PR description, preserving surrounding prose. The section
@@ -169,6 +172,44 @@ for seven days. Failed drift assertions also retain the plan and diff.
 `GITHUB_TOKEN` write-back may produce follow-up PR runs requiring approval
 under GitHub's token-trigger rules; inspect the run state and existing merge
 requirements. No additional token or repository policy change is configured.
+
+## Public developer portal
+
+`portal.yaml` declares the public `summit-ai-developer-portal`, its published
+pages, and the `Summit AI Gateway Chat API`. The landing page content is in
+`portal/pages/index.md` and its root slug `/` serves it at the portal domain
+root. The API catalog is at `/apis`, with terminal examples at
+`/getting-started`. Navigation and public visibility are configured explicitly.
+
+The API publishes OpenAPI 3.0.3 specification versions:
+
+- `specs/chat-completions-v1.0.0.json`: original `demo-chat` contract.
+- `specs/chat-completions-v1.1.0.json`: current `demo-chat` and
+  `demo-chat-nano` contract.
+
+Both versions describe `POST /v1/chat/completions`, text messages, generation
+parameters, assistant replies, streaming events, and errors. They are
+documentation versions of the same endpoint. API name, description, and
+version metadata come from the OpenAPI files using `!file` extraction.
+
+The public documentation does not expose the loopback data plane. Execute
+requests from the local terminal or Insomnia; browser Try It is disabled
+because the gateway has no configured public endpoint or browser CORS policy.
+After merging the reviewed plan, discover the portal's assigned domain with:
+
+```sh
+set -a
+source ./.env
+set +a
+export KONGCTL_DEFAULT_KONNECT_PAT="$KONNECT_PAT"
+kongctl get portal summit-ai-developer-portal --profile default \
+  --region "$KONNECT_REGION" --log-file .artifacts/kongctl.log -o json
+```
+
+Use `bash gateway.sh drift` to plan both manifests locally without applying.
+The pre-existing `Summit AI Chat Completions` catalog entry belongs to the
+different `summit-ai` namespace; this configuration uses a distinct API name
+and slug under `summit-ai-demo`.
 
 ## Verified deployment
 

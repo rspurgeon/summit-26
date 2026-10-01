@@ -18,7 +18,7 @@ case "${1:-}" in
     bash data-plane.sh certs
     "${cli[@]}" get organization "${context[@]}" -o json --jq '.id' --jq-raw-output > .plans/organization-id
     printf '%s\n' "$KONNECT_REGION" > .plans/region
-    "${cli[@]}" plan "${context[@]}" --mode apply -f ai-gateway.yaml \
+    "${cli[@]}" plan "${context[@]}" --mode apply -f ai-gateway.yaml -f portal.yaml \
       --require-namespace summit-ai-demo --output-file .plans/apply.json
     "${cli[@]}" diff "${context[@]}" --plan .plans/apply.json
     ;;
@@ -50,12 +50,12 @@ case "${1:-}" in
     jq -e '.choices[0].message.content | select(type == "string" and length > 0)' .artifacts/inference.json
     ;;
   drift)
-    "${cli[@]}" plan "${context[@]}" --mode apply -f ai-gateway.yaml \
+    "${cli[@]}" plan "${context[@]}" --mode apply -f ai-gateway.yaml -f portal.yaml \
       --require-namespace summit-ai-demo --output-file .plans/follow-up.json
     "${cli[@]}" diff "${context[@]}" --plan .plans/follow-up.json
     ;;
   cleanup-plan)
-    "${cli[@]}" plan "${context[@]}" --mode delete -f ai-gateway.yaml \
+    "${cli[@]}" plan "${context[@]}" --mode delete -f ai-gateway.yaml -f portal.yaml \
       --require-namespace summit-ai-demo --output-file .plans/delete.json
     "${cli[@]}" diff "${context[@]}" --plan .plans/delete.json
     ;;

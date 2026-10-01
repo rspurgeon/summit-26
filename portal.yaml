@@ -1,0 +1,71 @@
+_defaults:
+  kongctl:
+    namespace: summit-ai-demo
+
+portals:
+  - ref: summit-developer-portal
+    name: summit-ai-developer-portal
+    display_name: Summit AI Developer Portal
+    description: Public documentation for Summit AI Gateway chat generation
+    authentication_enabled: false
+    rbac_enabled: false
+    default_api_visibility: public
+    default_page_visibility: public
+    pages:
+      # The root slug makes this the domain's index page.
+      - ref: summit-portal-index
+        slug: /
+        title: Build with Summit AI
+        visibility: public
+        status: published
+        content: !file ./portal/pages/index.md
+      - ref: summit-portal-apis
+        slug: apis
+        title: API reference
+        visibility: public
+        status: published
+        content: !file ./portal/pages/apis.md
+      - ref: summit-portal-getting-started
+        slug: getting-started
+        title: Getting started
+        visibility: public
+        status: published
+        content: !file ./portal/pages/getting-started.md
+    customization:
+      ref: summit-portal-customization
+      menu:
+        main:
+          - path: /
+            title: Home
+            visibility: public
+            external: false
+          - path: /apis
+            title: API reference
+            visibility: public
+            external: false
+          - path: /getting-started
+            title: Getting started
+            visibility: public
+            external: false
+      spec_renderer:
+        try_it_ui: false
+        try_it_insomnia: true
+        show_schemas: true
+
+apis:
+  - ref: summit-gateway-chat-api
+    name: !file ./specs/chat-completions-v1.1.0.json#info.title
+    description: !file ./specs/chat-completions-v1.1.0.json#info.description
+    version: !file ./specs/chat-completions-v1.1.0.json#info.version
+    slug: summit-ai-gateway-chat
+    versions:
+      - ref: summit-gateway-chat-v1
+        version: !file ./specs/chat-completions-v1.0.0.json#info.version
+        spec: !file ./specs/chat-completions-v1.0.0.json
+      - ref: summit-gateway-chat-v1-1
+        version: !file ./specs/chat-completions-v1.1.0.json#info.version
+        spec: !file ./specs/chat-completions-v1.1.0.json
+    publications:
+      - ref: summit-gateway-chat-publication
+        portal_id: !ref summit-developer-portal#id
+        visibility: public
