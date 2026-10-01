@@ -1,0 +1,42 @@
+_defaults:
+  kongctl:
+    namespace: summit-ai
+
+portals:
+  - ref: summit-developer-portal
+    name: summit-developer-portal
+    display_name: Summit AI Developer Portal
+    description: Public API reference for the Summit AI Gateway
+    authentication_enabled: false
+    rbac_enabled: false
+    default_api_visibility: public
+    default_page_visibility: public
+    customization:
+      ref: summit-portal-customization
+      spec_renderer:
+        try_it_ui: false
+        show_schemas: true
+
+apis:
+  - ref: summit-chat-completions
+    name: !file ./specs/chat-completions-1.1.0.json#info.title
+    description: !file ./specs/chat-completions-1.1.0.json#info.description
+    version: !file ./specs/chat-completions-1.1.0.json#info.version
+    slug: summit-chat-completions
+    versions:
+      - ref: summit-chat-completions-v1-0
+        version: !file ./specs/chat-completions-1.0.0.json#info.version
+        spec: !file ./specs/chat-completions-1.0.0.json
+      - ref: summit-chat-completions-v1-1
+        version: !file ./specs/chat-completions-1.1.0.json#info.version
+        spec: !file ./specs/chat-completions-1.1.0.json
+    publications:
+      - ref: summit-chat-publication
+        portal_id: !ref summit-developer-portal#id
+        visibility: public
+    documents:
+      - ref: summit-chat-getting-started
+        title: Getting started
+        slug: getting-started
+        status: published
+        content: !file ./portal/getting-started.md

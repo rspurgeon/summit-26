@@ -136,7 +136,7 @@ existing `summit-ai` namespace and organization. It reuses repository secrets
 `KONNECT_PAT` and `OPENAI_API_KEY` and repository variable `KONNECT_REGION`
 (currently `us`; a secret of the same name is also supported).
 
-For same-repository PRs targeting `main`, changes to `ai-gateway.yaml`, public
+For same-repository PRs targeting `main`, changes to `ai-gateway.yaml`, `dev-portal.yaml`, `specs/**`, `portal/**`, public
 certificates, `ci/plan.json`, or this workflow generate an additive apply plan.
 The job commits `ci/plan.json` to the PR branch and renders that exact saved
 file with `kongctl diff --plan`. The PR description receives a section between
@@ -172,3 +172,55 @@ when changing workflow code. Existing branch and Actions controls are preserved.
 A bot plan push can create approval-required PR workflow runs; a repository writer
 may need to use **Approve workflows to run** in GitHub. See
 [GitHub token-trigger behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow).
+
+## Public developer portal
+
+`dev-portal.yaml` manages `summit-developer-portal` (display name **Summit AI
+Developer Portal**) in the existing `summit-ai` namespace. Portal authentication
+and RBAC are disabled; API and page defaults are public. It publishes the
+**Summit AI Chat Completions** API with public visibility and a published
+getting-started document.
+
+The API specification versions are stored outside the resource manifests:
+
+| Specification | Model aliases | Meaning |
+| --- | --- | --- |
+| `specs/chat-completions-1.0.0.json` | `demo-chat` | Original mini-only contract |
+| `specs/chat-completions-1.1.0.json` | `demo-chat`, `nano-chat` | Current contract; nano added |
+
+Both document `POST /v1/chat/completions`, text messages, model selection,
+non-streaming replies, streaming chunks, token limits and error responses.
+The API's current version is **1.1.0**. Metadata and specification versions are
+loaded from OpenAPI files using `!file`; the publication links to the portal
+using `!ref`. These are documentation versions of the same gateway endpoint.
+The guide in `portal/getting-started.md` supplies curl and repository examples.
+
+The public portal hosts documentation. The data plane remains bound to
+`127.0.0.1`; the documented server requires running the request on its host.
+Browser Try It is disabled for this local endpoint. No Gateway Service link or
+portal-issued application credential is needed for this documentation-only
+publication; clients use the existing local gateway as documented.
+
+PR planning and manual drift checks include **both manifests** in the existing
+saved-plan pipeline. Specs and guide changes trigger PR planning too. Preview
+all declared resources locally with:
+
+```bash
+bash kongctl.sh plan --mode apply -f ai-gateway.yaml -f dev-portal.yaml \
+  --base-dir "$PWD" --require-namespace summit-ai \
+  --output-file .plans/portal.json
+bash kongctl.sh diff --plan .plans/portal.json
+```
+
+Review the generated `ci/plan.json` and PR diff before merging. Main applies
+that saved plan using the existing credentials and repository controls. Until
+merge and a successful deployment, the new portal and API remain staged.
+After deployment, discover the actual portal URL rather than constructing it:
+
+```bash
+bash kongctl.sh get portal 'Summit AI Developer Portal' -o json
+```
+
+Stopping the local Docker gateway does not remove the portal or catalog API.
+For intended removal of the portal and its documented API, plan a scoped delete
+using **only** `-f dev-portal.yaml`, inspect its diff, and approve those removals.
