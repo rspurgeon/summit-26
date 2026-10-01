@@ -3,6 +3,8 @@
 This repository manages a native Konnect AI Gateway declaratively with
 kongctl. Its Docker data plane runs locally; Konnect hosts its control plane.
 The client model alias `demo-chat` routes to OpenAI `gpt-4.1-mini`.
+The lower-cost alias `demo-chat-nano` routes to OpenAI `gpt-4.1-nano`
+through the same endpoint and provider.
 
 The manifest is `ai-gateway.yaml`, owned by namespace `summit-ai-demo`.
 The gateway name is `summit-ai-demo`, with display name `Summit AI Demo`.
@@ -65,6 +67,7 @@ Use `chat.sh` to send a prompt and print the assistant's reply:
 printf '%s' 'Give me three names for a hiking app.' | ./chat.sh
 ./chat.sh --system "Answer concisely." "What is Kong?"
 ./chat.sh --json "Say hello."
+./chat.sh --model demo-chat-nano "Suggest three hiking app names."
 ```
 
 The script works from any directory when invoked by its full path. It reads

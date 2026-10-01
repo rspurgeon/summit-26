@@ -1,15 +1,90 @@
 {
   "metadata": {
     "version": "1.1",
-    "generated_at": "2026-10-01T17:03:04.258938526Z",
+    "generated_at": "2026-10-01T17:08:29.685987638Z",
     "generator": "kongctl/1.20.1",
     "mode": "apply"
   },
-  "changes": [],
-  "execution_order": null,
+  "changes": [
+    {
+      "id": "1:c:ai_gateway_model:demo-chat-nano",
+      "resource_type": "ai_gateway_model",
+      "resource_ref": "demo-chat-nano",
+      "action": "CREATE",
+      "fields": {
+        "capabilities": [
+          "generate"
+        ],
+        "config": {
+          "max_request_body_size": 8388608,
+          "response_streaming": "allow",
+          "route": {
+            "https_redirect_status_code": 426,
+            "model": {
+              "body_param": "model",
+              "values": [
+                "demo-chat-nano"
+              ]
+            },
+            "paths": [
+              "/v1"
+            ],
+            "preserve_host": false,
+            "regex_priority": 0,
+            "request_buffering": true,
+            "response_buffering": true,
+            "strip_path": true
+          }
+        },
+        "display_name": "Demo Chat Nano",
+        "enabled": true,
+        "formats": [
+          {
+            "type": "openai"
+          }
+        ],
+        "name": "demo-chat-nano",
+        "targets": [
+          {
+            "allow_auth_override": false,
+            "config": {
+              "type": "openai"
+            },
+            "name": "gpt-4.1-nano",
+            "provider": "openai",
+            "weight": 100
+          }
+        ],
+        "type": "model"
+      },
+      "parent": {
+        "ref": "summit-ai-demo",
+        "id": "3ed72703-bf7b-45ec-926f-529b5b504547"
+      },
+      "protecting_parent": {
+        "resource_type": "ai_gateway",
+        "resource_ref": "summit-ai-demo",
+        "resource_id": "3ed72703-bf7b-45ec-926f-529b5b504547",
+        "resource_name": "summit-ai-demo"
+      },
+      "namespace": "summit-ai-demo"
+    }
+  ],
+  "execution_order": [
+    "1:c:ai_gateway_model:demo-chat-nano"
+  ],
+  "execution_groups": [
+    [
+      "1:c:ai_gateway_model:demo-chat-nano"
+    ]
+  ],
   "summary": {
-    "total_changes": 0,
-    "by_action": {},
-    "by_resource": {}
+    "total_changes": 1,
+    "by_action": {
+      "CREATE": 1
+    },
+    "by_resource": {
+      "ai_gateway_model": 1
+    }
   }
 }
