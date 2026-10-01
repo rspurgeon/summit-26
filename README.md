@@ -1,11 +1,17 @@
 # Summit local AI Gateway
 
 Native Kong AI Gateway 2.0 with a local Docker data plane, a Konnect control
-plane, and one OpenAI model. Configuration is managed by kongctl 1.20.1.
+plane, and two OpenAI models. Configuration is managed by kongctl 1.20.1.
 
 `ai-gateway.yaml` owns namespace `summit-ai-demo` and gateway `Summit AI Demo`.
-Clients send model alias `demo-chat`; its upstream model is `gpt-4.1-mini`.
-Edit the upstream model in YAML to change it while preserving the alias.
+Clients select a model through the request body's `model` field:
+
+| Gateway alias | Upstream model |
+| --- | --- |
+| `demo-chat` | `gpt-4.1-mini` |
+| `demo-chat-nano` | `gpt-4.1-nano` |
+
+Edit the upstream model in YAML to change it while preserving its alias.
 The proxy binds to `127.0.0.1:8000` (HTTP) and `127.0.0.1:8443` (HTTPS).
 The data plane runs on your laptop; the control plane and provider credential
 are managed in Konnect. Internet access is required.
@@ -98,6 +104,16 @@ The script routes one request through the local gateway with alias
 response and token usage. It loads the local proxy port from `.env`, works
 from any directory, and requires curl and jq. Each request uses the
 configured OpenAI account, with output limited to 256 tokens.
+
+After the model-addition PR is merged and its saved plan is deployed, use
+the lower-cost Nano alias at the same endpoint:
+
+```bash
+curl --fail-with-body --silent --show-error --max-time 60 \
+  http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"demo-chat-nano","messages":[{"role":"user","content":"Say hello."}],"max_tokens":32}'
+```
 
 ## Stop and remove
 
