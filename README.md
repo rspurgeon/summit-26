@@ -6,7 +6,8 @@ configuration in `ai-gateway.yaml`. Based on the
 
 The gateway is named `summit-ai` (display name `Summit AI`) and managed in
 namespace `summit-ai`. Client alias `demo-chat` routes to OpenAI model
-`gpt-4.1-mini`. The proxy binds to `127.0.0.1:8000` and `127.0.0.1:8443`.
+`gpt-4.1-mini`. Alias `nano-chat` routes to the lower-cost `gpt-4.1-nano`.
+The proxy binds to `127.0.0.1:8000` and `127.0.0.1:8443`.
 The data plane image is `kong/kong-ai-gateway:2.0.3`.
 
 Requires kongctl with native `ai_gateways` support (checked with 1.20.1),
@@ -66,7 +67,13 @@ Send your own prompt through the local gateway and print the model's reply:
 bash chat.sh "Explain what an AI gateway does in two sentences."
 ```
 
-`chat.sh` uses alias `demo-chat` and respects `AIGW_PROXY_PORT` in `.env`.
+After the model PR is merged and deployed, select the lower-cost model:
+
+```bash
+AIGW_MODEL=nano-chat bash chat.sh "Explain what an AI gateway does in two sentences."
+```
+
+`chat.sh` uses alias `demo-chat` by default and respects `AIGW_PROXY_PORT` in `.env`.
 It handles JSON escaping for prompts and displays errors from failed requests.
 The gateway supplies the OpenAI credential; each request uses provider tokens.
 
